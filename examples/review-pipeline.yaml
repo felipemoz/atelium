@@ -1,0 +1,74 @@
+apiVersion: atelium/v1alpha1
+kind: Agent
+metadata:
+  name: review-pipeline
+  owner: atelium-examples
+  version: "1.0.0"
+  tags: [review, moderation, fan-out]
+  description: |
+    Fan-out pipeline that routes review content to specialized sub-agents
+    and aggregates their outputs. Demonstrates 1:N topology with SAGA compensation.
+
+spec:
+  model:
+    provider: ollama
+    name: llama3
+    temperature: 0.3
+
+  capabilities:
+    - content moderation
+    - review aggregation
+    - multi-agent coordination
+
+  accepts:
+    types: [text, json]
+
+  task:
+    description: |
+      Orchestrate specialized review agents to analyze content from multiple angles
+      and produce a consolidated moderation decision.
+    prompt_template: |
+      Review the following content for moderation:
+      {content}
+      Produce a JSON decision with: approved (bool), reason (str), score (float 0-1).
+
+    success_criteria:
+      - field: approved
+        type: boolean
+      - field: score
+        type: float
+        min: 0.0
+        max: 1.0
+      - field: reason
+        type: string
+        min_length: 20
+
+    self_healing:
+      strategy: retry_with_feedback
+      max_iterations: 2
+      feedback_template: "Fix output: {validation_errors}"
+
+  saga:
+    compensating_action: undo_moderation_decision
+    snapshot_before: [apply_moderation_decision]
+    irreversible_actions:
+      - name: apply_moderation_decision
+        requires: pre_confirmation
+
+  topology:
+    delegation:
+      mode: delegate
+    aggregation:
+      mode: wait_all
+      merge_strategy: union
+
+  blast_radius:
+    max_write_systems: [moderation-db]
+    human_approval_required: [apply_moderation_decision]
+    max_concurrent_pipelines: 10
+
+  observability:
+    traces: true
+    cost_tracking: true
+    pii_masking: true
+    pii_fields: [content, user_id]

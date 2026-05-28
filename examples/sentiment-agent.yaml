@@ -1,0 +1,91 @@
+apiVersion: atelium/v1alpha1
+kind: Agent
+metadata:
+  name: sentiment-agent
+  owner: atelium-examples
+  version: "1.0.0"
+  tags: [nlp, sentiment, classification]
+  description: Classifies text sentiment with confidence scoring and self-healing.
+
+spec:
+  model:
+    provider: ollama
+    name: llama3
+    temperature: 0.2
+    max_tokens: 512
+
+  capabilities:
+    - sentiment classification
+    - text analysis
+    - confidence scoring
+
+  accepts:
+    types: [text, json]
+
+  task:
+    description: Classify the sentiment of the provided text as positive, negative, or neutral.
+    prompt_template: |
+      You are a precise sentiment analysis engine.
+
+      Analyze the sentiment of the following text and respond ONLY with valid JSON.
+
+      Text: {text}
+
+      Required JSON format:
+      {{
+        "sentiment": "positive" | "negative" | "neutral",
+        "confidence": <float between 0.0 and 1.0>,
+        "reasoning": "<brief explanation>"
+      }}
+
+    success_criteria:
+      - field: sentiment
+        type: enum
+        values: [positive, negative, neutral]
+      - field: confidence
+        type: float
+        min: 0.0
+        max: 1.0
+      - field: reasoning
+        type: string
+        min_length: 10
+
+    transition_guard: "output['confidence'] >= 0.6"
+
+    failure_criteria:
+      - condition: "output.get('error') is not None"
+        action: compensate
+        description: Hard model error
+
+    self_healing:
+      strategy: retry_with_feedback
+      max_iterations: 3
+      feedback_template: |
+        Your previous response had issues:
+        {validation_errors}
+
+        You MUST return valid JSON with exactly these fields:
+        {success_criteria}
+
+        Fix: {failed_fields}
+
+  saga:
+    compensating_action: log_sentiment_failure
+    snapshot_before: []
+
+  topology:
+    delegation:
+      mode: direct
+    aggregation:
+      mode: wait_all
+      merge_strategy: union
+
+  blast_radius:
+    max_write_systems: []
+    max_read_systems: [text-corpus]
+    max_concurrent_pipelines: 20
+
+  observability:
+    traces: true
+    cost_tracking: true
+    pii_masking: false
