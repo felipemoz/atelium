@@ -1,83 +1,84 @@
 # Atelium — Thesis Research
 
-**Título provisório:** Distributed Systems Patterns for Multi-Agent AI Orchestration: A Registry-Based Governance Architecture
+**Working title:** Fault-Tolerant Agent Networks: A Layered Resilience Model for Multi-Agent LLM Systems
 
-**Nível:** Mestrado Acadêmico
+**Level:** Academic Master's Degree
 
-**Campo:** AI Engineering / Distributed Systems
+**Field:** AI Engineering / Distributed Systems
 
 ---
 
-## Problema
+## Problem
 
-A proliferação de agentes LLM em ambientes corporativos carece de infraestrutura padronizada para governança, descoberta, composição e transações distribuídas. Frameworks como OpenClaw e Hermes resolvem a construção de agentes individuais, mas não o problema de operar uma frota de agentes com garantias de consistência, permissões e rastreabilidade.
+The proliferation of LLM agents in enterprise environments lacks standardized infrastructure for governance, discovery, composition, and distributed transactions. Frameworks like LangGraph and CrewAI solve the problem of building individual agents, but not the problem of operating a fleet of agents with consistency guarantees, permission controls, and auditability.
 
-## Hipótese Central
+## Central Hypothesis
 
-Padrões consolidados de sistemas distribuídos — especificamente Service Registry, SAGA, Choreography/Orchestration e Event Sourcing — podem ser formalizados e adaptados para sistemas multi-agente baseados em LLM, resultando em uma arquitetura de referência implementável e validável empiricamente.
+Established distributed systems patterns — specifically Service Registry, SAGA, Choreography/Orchestration, and Event Sourcing — can be formalized and adapted for LLM-based multi-agent systems, resulting in a reference architecture that is both implementable and empirically validatable.
 
-## Tese Central
+## Central Thesis
 
-> Redes de agentes LLM carecem de tolerância a falhas por design. Um modelo de resiliência em camadas — Transition Guard → Self-Healing → SAGA-A → HITL — combinado com roteamento emergente e memória acoplada ao step, pode tornar redes de agentes tão robustas quanto sistemas distribuídos maduros.
+> LLM agent networks lack fault tolerance by design. A layered resilience model — Transition Guard → Self-Healing → SAGA-A → HITL — combined with emergent routing and step-coupled memory, can make agent networks as robust as mature distributed systems.
 
-## Hipóteses
+## Hypotheses
 
-| # | Hipótese |
+| # | Hypothesis |
 |---|---|
-| H1 | Frameworks atuais não possuem primitivas de compensação ou rollback |
-| H2 | Ações de agentes classificam-se em: reversível, compensável, irreversível |
-| H3 | Ausência de compensating actions produz inconsistência mensurável |
-| H4 | SAGA-A reduz inconsistência sem comprometer throughput |
-| H5 | Ausência de Transition Guards é causa primária de propagação de falha |
-| H6 | Critérios declarados + self-healing reduzem HITL proporcionalmente |
-| H7 | Estratégia de agregação em N:1 determina consistência vs. resiliência |
-| H8 | Agentes stateless com Step-Coupled Memory são condição para Emergent Routing |
+| H1 | Current frameworks lack native compensation or rollback primitives |
+| H2 | Agent actions can be classified into: reversible, compensable, irreversible |
+| H3 | Absence of compensating actions produces measurable state inconsistency |
+| H4 | SAGA-A reduces inconsistency without significantly compromising throughput |
+| H5 | Absence of Transition Guards is the primary cause of failure propagation in agent networks |
+| H6 | Declared success criteria + self-healing reduce HITL proportionally |
+| H7 | Aggregation strategy in N:1 topologies determines consistency vs. resilience trade-off |
+| H8 | Stateless agents with Step-Coupled Memory are a necessary condition for Emergent Routing |
 
-## Contribuições
+## Contributions
 
-1. **Modelo de Resiliência em Camadas** — Transition Guard + Self-Healing + SAGA-A + HITL
-2. **Taxonomia de irreversibilidade** — reversível / compensável / irreversível
-3. **Transition Guard com Self-Healing** — contrato declarativo com loop de correção
-4. **SAGA-A** — SAGA estendido para não-determinismo e topologias N:1
-5. **Emergent Routing** — terceiro modo de composição: roteamento probabilístico por afinidade
-6. **Network Topologies (1:N, N:1)** — delegação e agregação com tolerância a falha parcial
-7. **Step-Coupled Memory** — agente stateless, step stateful — condição para roteamento emergente
-8. **Análise empírica de frameworks** — matriz comparativa de primitivas de tolerância a falhas
-9. **Agent Manifest** — especificação declarativa OSS unificando todas as primitivas
-
----
-
-## Estrutura do Repositório
-
-```
-proposal/       Proposta formal da tese
-patterns/       Catálogo de padrões arquiteturais
-literature/     Revisão sistemática de literatura
-architecture/   Diagramas e especificações técnicas
-experiments/    Protocolos e resultados de experimentos
-references/     BibTeX e anotações bibliográficas
-```
+1. **Layered Resilience Model** — Transition Guard + Self-Healing + SAGA-A + HITL
+2. **Irreversibility Taxonomy** — reversible / compensable / irreversible
+3. **Transition Guard with Self-Healing** — declarative contract with iterative correction loop
+4. **SAGA-A** — SAGA extended for non-determinism and N:1 topologies
+5. **Emergent Routing** — third composition mode: probabilistic routing by capability affinity
+6. **Network Topologies (1:N, N:1)** — delegation and aggregation with partial failure tolerance
+7. **Step-Coupled Memory** — stateless agent, stateful step — necessary condition for emergent routing
+8. **Empirical framework analysis** — comparative matrix of fault-tolerance primitives
+9. **Agent Manifest** — declarative OSS specification unifying all proposed primitives
 
 ---
 
-## Landscape Atual (maio/2026)
+## Repository Structure
 
-| Solução | Tipo | Foco | Gap |
+```
+proposal/       Formal thesis proposal and dissertation chapters
+patterns/       Architectural pattern catalog (11 patterns)
+literature/     Systematic literature review
+architecture/   Technical diagrams and specifications
+experiments/    Experiment protocols and results
+references/     BibTeX and bibliographic annotations
+papers/         Academic paper drafts
+```
+
+---
+
+## Current Landscape (May 2026)
+
+| Solution | Type | Focus | Gap |
 |---|---|---|---|
-| Microsoft Agent 365 | Proprietário, $15/user/mês | Control plane enterprise | Vendor lock-in, sem OSS |
-| OpenClaw | OSS (345k stars) | Runtime de agentes autônomos | Sem registry ou governance |
-| Hermes Agent | OSS (Nous Research) | Learning loop por workflow | Sem composição multi-agente |
-| LangSmith | SaaS | Observabilidade e traces | Sem catálogo ou permissões |
-| N8N | OSS | DAG visual (workflow engine) | Sem agent-native node |
+| Microsoft Agent 365 | Proprietary, $15/user/month | Enterprise control plane | Vendor lock-in, no OSS |
+| LangGraph | OSS | Stateful agent DAG runtime | No registry or governance |
+| CrewAI | OSS | Multi-agent collaboration | No fault-tolerance primitives |
+| LangSmith | SaaS | Observability and traces | No catalog or permissions |
+| N8N | OSS | Visual DAG workflow engine | No agent-native node |
 
-**Gap identificado:** Nenhuma solução OSS entrega control plane completo — registry, permissões, SAGA, RAG compartilhado e coreografia A2A como plataforma unificada.
+**Identified gap:** No OSS solution delivers a complete control plane — registry, permissions, SAGA, shared RAG, and A2A choreography as a unified platform.
 
 ---
 
-## Conexões Teóricas
+## Theoretical Connections
 
-- **Microservices patterns** → adaptados para agentes (Fowler, Newman)
-- **SAGA pattern** (Garcia-Molina & Salem, 1987) → transações em workflows agenticos
-- **Event-driven architecture** → coreografia A2A via protocolo MCP/ACP
-- **Service mesh** (Istio) → analogia para Agent Fabric
-- **Backstage (Spotify)** → analogia para Agent Portal
+- **Microservices patterns** → adapted for agents (Fowler, Newman)
+- **SAGA pattern** (Garcia-Molina & Salem, 1987) → transactions in agentic workflows
+- **Event-driven architecture** → A2A choreography via MCP/ACP protocol
+- **Service mesh** (Istio) → analogy for Agent Fabric
+- **Backstage (Spotify)** → analogy for Agent Portal

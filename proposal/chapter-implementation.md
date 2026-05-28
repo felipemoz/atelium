@@ -1,28 +1,28 @@
-# Capítulo 6 — Atelium: Plataforma de Referência para Redes de Agentes Tolerantes a Falhas
+# Chapter 7 — Atelium: Reference Platform for Fault-Tolerant Agent Networks
 
-## 6.1 Motivação
+## 7.1 Motivation
 
-Os capítulos anteriores formalizaram os padrões arquiteturais, estabeleceram as hipóteses e descreveram os experimentos que as validam. Este capítulo descreve **Atelium** — a implementação de referência OSS que serve simultaneamente como:
+Previous chapters formalized the architectural patterns, established the hypotheses, and described the experiments that validate them. This chapter describes **Atelium** — the OSS reference implementation that serves simultaneously as:
 
-1. **Artefato de validação** — plataforma onde os experimentos dos Estudos 1, 2 e 3 são executados
-2. **Prova de viabilidade** — demonstra que os padrões propostos são implementáveis com tecnologia disponível
-3. **Contribuição à comunidade** — plataforma reutilizável por pesquisadores e praticantes
+1. **Validation artifact** — the platform where Studies 1, 2, and 3 experiments are executed
+2. **Proof of viability** — demonstrates that the proposed patterns are implementable with available technology
+3. **Community contribution** — a reusable platform for researchers and practitioners
 
-Seguindo a metodologia Design Science Research [Hevner et al., 2004], o artefato não é apenas um subproduto da pesquisa — ele é uma contribuição em si, avaliada por critérios de utilidade, completude e generalidade.
+Following Design Science Research methodology [Hevner et al., 2004], the artifact is not merely a byproduct of the research — it is a contribution in itself, evaluated by criteria of utility, completeness, and generality.
 
 ---
 
-## 6.2 Visão Geral da Plataforma
+## 7.2 Platform Overview
 
-Atelium é um **Identity Platform (IdP) para agentes** — análogo ao que o Backstage faz para serviços de software, mas com primitivas nativas para as propriedades únicas de agentes LLM: não-determinismo, ações irreversíveis, roteamento dinâmico e estado distribuído.
+Atelium is an **Identity Platform (IdP) for agents** — analogous to what Backstage does for software services, but with native primitives for the unique properties of LLM agents: non-determinism, irreversible actions, dynamic routing, and distributed state.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    AI STAGE PLATFORM                     │
+│                    ATELIUM PLATFORM                      │
 │                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌───────────────┐  │
 │  │ Agent Portal │  │ Registry API │  │  CLI (atelium)│  │
-│  │ (catálogo,   │  │ (CRUD,       │  │  scaffold,    │  │
+│  │ (catalog,    │  │ (CRUD,       │  │  scaffold,    │  │
 │  │  ownership,  │  │  routing,    │  │  register,    │  │
 │  │  cost)       │  │  health)     │  │  deploy)      │  │
 │  └──────┬───────┘  └──────┬───────┘  └───────┬───────┘  │
@@ -47,29 +47,29 @@ Atelium é um **Identity Platform (IdP) para agentes** — análogo ao que o Bac
 
 ---
 
-## 6.3 O Agente como Entidade de Primeira Classe
+## 7.3 The Agent as a First-Class Entity
 
-A diferença central entre Atelium e plataformas existentes (LangSmith, Microsoft Agent 365) é que o agente é uma **entidade com identidade própria**, não apenas um processo efêmero.
+The central difference between Atelium and existing platforms (LangSmith, Microsoft Agent 365) is that the agent is an **entity with its own identity**, not merely an ephemeral process.
 
-Cada agente registrado na plataforma tem:
+Every agent registered on the platform has:
 
-| Propriedade | Descrição | Análogo em software tradicional |
+| Property | Description | Traditional software analogue |
 |---|---|---|
-| **Identidade** | UUID + nome + versão semântica | Container image tag |
-| **Owner** | Time/pessoa responsável | CODEOWNERS |
-| **Capabilities** | Vetor semântico de capacidades | API contract |
-| **MCP Scopes** | Ferramentas autorizadas | IAM policy |
-| **Knowledge ACL** | Namespaces de RAG acessíveis | Database permissions |
+| **Identity** | UUID + name + semantic version | Container image tag |
+| **Owner** | Responsible team/person | CODEOWNERS |
+| **Capabilities** | Semantic capability vector | API contract |
+| **MCP Scopes** | Authorized tools | IAM policy |
+| **Knowledge ACL** | Accessible RAG namespaces | Database permissions |
 | **Task Contract** | Success criteria + transition guard | SLO definition |
-| **SAGA Config** | Compensating actions por ação | Rollback script |
-| **Blast Radius** | Sistemas máximos impactáveis | Network policy |
-| **Lineage** | Histórico de versões e deploys | Git history |
+| **SAGA Config** | Compensating actions per action | Rollback script |
+| **Blast Radius** | Maximum impactable systems | Network policy |
+| **Lineage** | Version and deploy history | Git history |
 
 ---
 
-## 6.4 Agent Manifest — Especificação Completa
+## 7.4 Agent Manifest — Complete Specification
 
-O Agent Manifest é o contrato declarativo que todo agente registrado na plataforma deve fornecer. É o artefato central que conecta todos os padrões propostos.
+The Agent Manifest is the declarative contract that every agent registered on the platform must provide. It is the central artifact connecting all proposed patterns.
 
 ```yaml
 apiVersion: atelium/v1alpha1
@@ -81,14 +81,14 @@ metadata:
   tags: [legal, contracts, BR, compliance]
 
 spec:
-  # --- Modelo LLM (apenas OSS) ---
+  # --- LLM Model (OSS only) ---
   model:
     provider: ollama
     name: llama3:70b
-    temperature: 0.1          # baixa para tarefas de classificação
+    temperature: 0.1          # low for classification tasks
     max_tokens: 4096
 
-  # --- Capacidades (base do Emergent Routing) ---
+  # --- Capabilities (foundation of Emergent Routing) ---
   capabilities:
     - "contract review and classification"
     - "jurisdiction analysis Brazil"
@@ -98,7 +98,7 @@ spec:
     input_types: [contract_document, legal_text]
     required_fields: [document_text, document_type]
 
-  # --- Conectores MCP (princípio do menor privilégio) ---
+  # --- MCP connectors (principle of least privilege) ---
   mcps:
     - name: jira
       version: "^2.1"
@@ -107,7 +107,7 @@ spec:
       version: "^3.0"
       scopes: [read:pages]
 
-  # --- Knowledge namespaces (RAG compartilhado) ---
+  # --- Knowledge namespaces (shared RAG) ---
   knowledge:
     namespaces:
       - name: legal-contracts-br
@@ -115,7 +115,7 @@ spec:
       - name: lgpd-compliance
         access: read-only
 
-  # --- Contrato de tarefa (Transition Guard) ---
+  # --- Task contract (Transition Guard) ---
   task:
     description: "Classify contract by jurisdiction and identify legal risks"
 
@@ -142,9 +142,9 @@ spec:
       strategy: retry_with_feedback
       max_iterations: 3
       feedback_template: |
-        Sua resposta anterior não satisfez os critérios:
+        Your previous response did not satisfy the required criteria:
         {validation_errors}
-        Tente novamente considerando: {success_criteria}
+        Please try again considering: {success_criteria}
 
     transition_to: legal-risk-agent
     transition_guard: >
@@ -152,7 +152,7 @@ spec:
       AND output.confidence >= 0.75
       AND output.risk_level != null
 
-  # --- SAGA-A (tolerância a falhas) ---
+  # --- SAGA-A (fault tolerance) ---
   saga:
     compensating_action: delete_review_draft
     irreversible_actions:
@@ -161,10 +161,10 @@ spec:
         dry_run: true
     snapshot_before: [write_to_crm, create_jira_ticket]
 
-  # --- Topologia (1:N e N:1) ---
+  # --- Topology (1:N and N:1) ---
   topology:
     delegation:
-      mode: route_best            # 1:1 por padrão
+      mode: route_best            # 1:1 by default
     aggregation:
       mode: wait_all
       timeout: 120s
@@ -177,186 +177,192 @@ spec:
     forbidden: [production-db, billing-api, hr-records]
     human_approval_required: [send_legal_notification, approve_contract]
 
-  # --- Observabilidade ---
+  # --- Observability ---
   observability:
     traces: true
     cost_tracking: true
     pii_masking: true
-    log_step_memory: true         # persiste step para replay
+    log_step_memory: true         # persists step for replay
 ```
 
 ---
 
-## 6.5 Como os Experimentos Usam a Plataforma
+## 7.5 How Experiments Use the Platform
 
-### Experimento E1 — Análise de Frameworks (Paper 1)
+### Experiment E1 — Framework Analysis (Paper 1)
 
-Atelium não é usado para executar LangGraph/CrewAI/AutoGen — ele fornece o **protocolo de avaliação FTEP** como ferramenta CLI:
+Atelium does not execute LangGraph/CrewAI/AutoGen — it provides the **FTEP evaluation protocol** as a CLI tool:
 
 ```bash
-atelium eval --framework langgraph --ftep-dimensions all \
-             --pipeline canonical-4agent \
-             --inject-failure position=2,3,4 \
-             --runs 30 \
-             --output results/e1-langgraph.json
+atelium eval ftep --framework langgraph --dimensions all \
+                  --pipeline canonical-4agent \
+                  --inject-failure position=2,3,4 \
+                  --runs 30 \
+                  --output results/e1-langgraph.json
 ```
 
-O CLI executa cada framework no pipeline canônico, injeta falhas, mede consistência de estado e gera a matriz comparativa. Isso resolve o problema de inter-rater reliability: a avaliação é automatizada e reproduzível.
+The CLI runs each framework on the canonical pipeline, injects failures, measures state consistency, and generates the comparative matrix. This resolves the inter-rater reliability problem: evaluation is automated and reproducible.
 
-### Experimento E2 — Falha Induzida sem vs. com SAGA-A (Paper 1)
+### Experiment E2 — Induced Failure without vs. with SAGA-A (Paper 1)
 
 ```bash
-# Baseline: pipeline sem SAGA-A
-atelium run --manifest examples/contract-pipeline.yaml \
-            --saga-a disabled \
-            --inject-failure position=3 \
-            --runs 50
+# Baseline: pipeline without SAGA-A
+atelium benchmark saga \
+  --manifest examples/contract-pipeline.yaml \
+  --saga-a false \
+  --inject-failure position=3 \
+  --runs 50
 
-# Tratamento: pipeline com SAGA-A
-atelium run --manifest examples/contract-pipeline.yaml \
-            --saga-a enabled \
-            --inject-failure position=3 \
-            --runs 50
+# Treatment: pipeline with SAGA-A
+atelium benchmark saga \
+  --manifest examples/contract-pipeline.yaml \
+  --saga-a true \
+  --inject-failure position=3 \
+  --runs 50
 ```
 
-Métricas coletadas automaticamente: state consistency score, tempo de detecção, ações compensadas.
+Automatically collected metrics: state consistency score, detection time, compensated actions.
 
-### Experimento E3 — Transition Guard com Self-Healing (Paper 1, H5+H6)
+### Experiment E3 — Transition Guard with Self-Healing (Paper 1, H5+H6)
 
 ```bash
-atelium run --manifest examples/contract-pipeline.yaml \
-            --transition-guard disabled \
-            --inject-incomplete-output agent=classifier \
-            --runs 50
+atelium run pipeline examples/contract-pipeline.yaml \
+  --transition-guard false \
+  --inject-failure position=classifier \
+  --runs 50
 
-atelium run --manifest examples/contract-pipeline.yaml \
-            --transition-guard enabled \
-            --self-healing enabled \
-            --inject-incomplete-output agent=classifier \
-            --runs 50
+atelium run pipeline examples/contract-pipeline.yaml \
+  --transition-guard true \
+  --self-healing true \
+  --inject-failure position=classifier \
+  --runs 50
 ```
 
-Mede: taxa de propagação downstream de output inválido, número de HITL escalations, taxa de auto-resolução via self-healing.
+Measures: downstream propagation rate of invalid output, number of HITL escalations, self-resolution rate via self-healing.
 
-### Experimento E4 — Emergent Routing (Paper 2)
+### Experiment E4 — Emergent Routing (Paper 2)
 
 ```bash
-# Popula o registry com 47 agentes especializados
-atelium registry seed --agents examples/agent-registry-47.yaml
+# Seed the registry with 47 specialized agents
+atelium registry seed examples/agent-registry-47.yaml
 
-# Executa benchmark de routing
+# Run routing benchmark
 atelium benchmark routing \
   --tasks benchmark/200-tasks.json \
   --methods random,round-robin,emergent,oracle \
-  --affinity-weights alpha=0.50,beta=0.30,gamma=0.10,delta=0.10 \
+  --alpha 0.50 --beta 0.30 --gamma 0.10 --delta 0.10 \
   --runs 5 \
   --output results/e4-routing.json
 ```
 
-### Experimento E5 — SRS Necessity (Paper 2, Teorema 1)
+### Experiment E5 — SRS Necessity (Paper 2, Theorem 1)
 
 ```bash
-# Injeta re-routing dinâmico (40 eventos)
-atelium benchmark srs-necessity \
+# Inject dynamic re-routing (40 events)
+atelium benchmark srs \
   --rerouting-events 40 \
   --memory-mode agent-stateful \
-  --runs 20
+  --runs 20 \
+  --output results/e5-agent-stateful.json
 
-atelium benchmark srs-necessity \
+atelium benchmark srs \
   --rerouting-events 40 \
   --memory-mode step-resident \
-  --runs 20
+  --runs 20 \
+  --output results/e5-step-resident.json
 ```
 
-Mede: context completeness após re-routing (esperado: 0.38 vs. 1.00).
+Measures: context completeness after re-routing (expected: 0.38 vs. 1.00).
 
 ---
 
-## 6.6 Stack Técnico OSS
+## 7.6 OSS Technical Stack
 
-Todos os componentes respeitam o princípio OSS declarado no documento [OSS-PRINCIPLES.md]:
+All components follow the OSS principle declared in [OSS-PRINCIPLES.md]:
 
-| Camada | Componente | Licença | Justificativa |
+| Layer | Component | License | Rationale |
 |---|---|---|---|
-| Registry + Routing | Qdrant (HNSW) | Apache 2.0 | ANN sub-linear, OSS, self-hostável |
-| Event Bus (A2A) | NATS JetStream | Apache 2.0 | Baixa latência, persistência, OSS |
-| Step Store | PostgreSQL + pgvector | PostgreSQL License | Step log + embedding sem infra extra |
-| LLM Runtime | Ollama + Llama 3 70B | MIT + Meta License | OSS, local, sem API key |
-| Observability | Langfuse + OpenTelemetry | MIT + Apache 2.0 | Tracing nativo de LLM, OSS |
-| Auth/Permissions | OpenFGA | Apache 2.0 | Controle relacional, OSS da Okta |
-| Workflow (DAG) | N8N | Fair-code | Composição visual, self-hostável |
-| API Gateway | FastAPI | MIT | Python nativo, rápido de iterar |
+| Agent Runtime | LangGraph | MIT | Stateful DAG, native checkpointing |
+| Registry + Routing | Redis Stack (RediSearch) | RSALv2/SSPL | ANN sub-linear, self-hostable |
+| Event Bus (A2A) | NATS JetStream | Apache 2.0 | Low latency, persistence, OSS |
+| Step Store (hot) | Redis | BSD 3-Clause | In-flight state, TTL, pub/sub |
+| Step Store (archive) | PostgreSQL | PostgreSQL License | Durable persistence, replay |
+| Knowledge / RAG | pgvector | PostgreSQL License | Namespaces on existing Postgres |
+| LLM Runtime | Ollama + Llama 3 70B | MIT + Meta License | OSS, local, no API key |
+| Observability | Langfuse + OpenTelemetry | MIT + Apache 2.0 | Native LLM tracing, OSS |
+| Auth/Permissions | OpenFGA | Apache 2.0 | Relational access control, OSS |
+| API Gateway | FastAPI | MIT | Native Python, async, OpenAPI |
 
 ---
 
-## 6.7 Arquitetura de Implantação
+## 7.7 Deployment Architecture
 
-A plataforma pode ser implantada em três configurações para cobrir diferentes cenários de pesquisa e produção:
+The platform can be deployed in three configurations to cover different research and production scenarios:
 
-**Modo 1 — Local (laptop, experimentos)**
+**Mode 1 — Local (laptop, experiments)**
 ```
-Docker Compose: Qdrant + NATS + PostgreSQL + Ollama + Langfuse
-Tempo de setup: ~10 minutos
-Requisitos: 16GB RAM, GPU opcional
-```
-
-**Modo 2 — Cluster (experimentos de escala)**
-```
-Kubernetes + Helm charts fornecidos
-Registry: até 10k agentes testado
-Step store: sharding automático via PostgreSQL
+Docker Compose: Redis + NATS + PostgreSQL + Ollama + Langfuse
+Setup time: ~10 minutes
+Requirements: 16GB RAM, optional GPU
 ```
 
-**Modo 3 — Produção (validação com praticantes)**
+**Mode 2 — Cluster (scale experiments)**
 ```
-HA: Qdrant cluster, NATS cluster, PostgreSQL replication
+Kubernetes + provided Helm charts
+Registry: up to 10k agents tested
+Step store: automatic sharding via PostgreSQL
+```
+
+**Mode 3 — Production (practitioner validation)**
+```
+HA: Redis Cluster, NATS cluster, PostgreSQL replication
 Monitoring: Grafana + Prometheus + Langfuse
 Auth: OpenFGA + Keycloak
 ```
 
 ---
 
-## 6.8 Critérios de Avaliação do Artefato (DSR)
+## 7.8 Artifact Evaluation Criteria (DSR)
 
-Seguindo Hevner et al. [2004], o artefato é avaliado em três dimensões:
+Following Hevner et al. [2004], the artifact is evaluated on five dimensions:
 
-| Critério | Métrica | Alvo |
+| Criterion | Metric | Target |
 |---|---|---|
-| **Utilidade** | Taxa de adoção por praticantes (survey pós-experimento) | ≥ 70% considerariam usar em produção |
-| **Completude** | Cobertura dos padrões implementados vs. propostos | 100% dos 11 padrões com implementação de referência |
-| **Generalidade** | Funciona com LangGraph, CrewAI, AutoGen sem modificação | 3/3 frameworks integrados |
-| **Eficiência** | Overhead de routing vs. chamada direta | ≤ 15ms p95 para registry query |
-| **Reprodutibilidade** | Experimentos reproduzíveis por terceiros | Todos os 5 experimentos com seed fixo |
+| **Utility** | Adoption rate by practitioners (post-experiment survey) | ≥ 70% would consider using in production |
+| **Completeness** | Coverage of implemented vs. proposed patterns | 100% of 11 patterns with reference implementation |
+| **Generality** | Works with LangGraph, CrewAI, AutoGen without modification | 3/3 frameworks integrated |
+| **Efficiency** | Routing overhead vs. direct call | ≤ 15ms p95 for registry query |
+| **Reproducibility** | Experiments reproducible by third parties | All 5 experiments with fixed seed |
 
 ---
 
-## 6.9 Roadmap de Desenvolvimento da Pesquisa
+## 7.9 Research Development Roadmap
 
-O desenvolvimento do artefato segue os marcos da dissertação:
+Artifact development follows the dissertation milestones:
 
 ```
-Mês 1-2:   atelium CLI + Agent Manifest parser + Registry básico
-Mês 3:     Transition Guard Engine + Self-Healing Loop
-Mês 4:     SAGA-A Coordinator + Step-Resident State
-Mês 5:     Emergent Router (Qdrant + affinity scoring)
-Mês 6:     Topologias 1:N e N:1 + Merge Engine
-Mês 7:     FTEP CLI (experimentos E1-E3)
-Mês 8:     Benchmark de routing (experimentos E4-E5)
-Mês 9-10:  Avaliação com praticantes + coleta de feedback
-Mês 11-12: Refinamento, escrita, defesa
+Month 1-2:   atelium CLI + Agent Manifest parser + basic Registry
+Month 3:     Transition Guard Engine + Self-Healing Loop
+Month 4:     SAGA-A Coordinator + Step-Resident State
+Month 5:     Emergent Router (Redis Stack + affinity scoring)
+Month 6:     1:N and N:1 topologies + Merge Engine
+Month 7:     FTEP CLI (experiments E1-E3)
+Month 8:     Routing benchmark (experiments E4-E5)
+Month 9-10:  Practitioner evaluation + feedback collection
+Month 11-12: Refinement, writing, defense
 ```
 
 ---
 
-## 6.10 Relação com Trabalhos Concorrentes
+## 7.10 Relationship with Concurrent Work
 
-| Plataforma | Tipo | Agent como entidade? | SAGA-A? | Emergent Routing? | OSS? |
+| Platform | Type | Agent as entity? | SAGA-A? | Emergent Routing? | OSS? |
 |---|---|---|---|---|---|
-| Microsoft Agent 365 | Proprietário | Parcial | Não | Não | Não |
-| LangSmith | SaaS | Não (trace-only) | Não | Não | Não |
-| SagaLLM | Arquitetura customizada | Não | Parcial | Não | Sim |
-| ALAS | Domínio específico | Não | Parcial | Não | Sim |
-| Agent Identity URI | Naming/discovery | Sim (naming) | Não | Não | Sim |
-| **Atelium** | **Control plane OSS** | **Sim (completo)** | **Sim** | **Sim** | **Sim** |
+| Microsoft Agent 365 | Proprietary | Partial | No | No | No |
+| LangSmith | SaaS | No (trace-only) | No | No | No |
+| SagaLLM | Custom architecture | No | Partial | No | Yes |
+| ALAS | Domain-specific | No | Partial | No | Yes |
+| Agent Identity URI | Naming/discovery | Yes (naming) | No | No | Yes |
+| **Atelium** | **OSS control plane** | **Yes (complete)** | **Yes** | **Yes** | **Yes** |
 
-O gap persiste: nenhuma plataforma existente trata o agente como entidade de primeira classe com identidade, governança, SAGA-A, Transition Guard, Emergent Routing e Step-Resident State integrados como sistema coerente.
+The gap persists: no existing platform treats the agent as a first-class entity with identity, governance, SAGA-A, Transition Guard, Emergent Routing, and Step-Resident State integrated as a coherent system.

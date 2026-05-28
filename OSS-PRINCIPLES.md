@@ -1,79 +1,79 @@
 # Atelium — OSS Principles & Definitive Stack
 
-## Regra Fundamental
+## Fundamental Rule
 
-> Toda tecnologia usada na implementação de referência e nos experimentos deve ser 100% open source e self-hostável.
+> Every technology used in the reference implementation and experiments must be 100% open source and self-hostable.
 
-Sistemas proprietários (Agent 365, LangSmith, GPT-4, Claude) podem ser citados e comparados na revisão de literatura, mas **nunca como dependência do artefato produzido**.
+Proprietary systems (Agent 365, LangSmith, GPT-4, Claude) may be cited and compared in the literature review, but **never as a dependency of the produced artifact**.
 
 ---
 
-## Stack Definitivo
+## Definitive Stack
 
-Decisões tomadas e fixadas. Alterações requerem justificativa explícita.
+Decisions made and locked. Changes require explicit justification.
 
-### Camada de Execução
+### Execution Layer
 
-| Papel | Tecnologia | Licença | Decisão |
+| Role | Technology | License | Decision |
 |---|---|---|---|
-| Agent runtime | **LangGraph** | MIT | DAG stateful com checkpointing nativo — suporte direto a Transition Guard e Step-Resident State |
-| LLM serving (local) | **Ollama** | MIT | Zero config para experimentos e laptop |
-| LLM serving (produção) | **vLLM** | Apache 2.0 | OpenAI-compatible API, alta performance |
+| Agent runtime | **LangGraph** | MIT | Stateful DAG with native checkpointing — direct support for Transition Guard and Step-Resident State |
+| LLM serving (local) | **Ollama** | MIT | Zero-config for experiments and laptop dev |
+| LLM serving (production) | **vLLM** | Apache 2.0 | OpenAI-compatible API, high performance |
 
-### Camada de Comunicação
+### Communication Layer
 
-| Papel | Tecnologia | Licença | Decisão |
+| Role | Technology | License | Decision |
 |---|---|---|---|
-| Event bus A2A | **NATS JetStream** | Apache 2.0 | Baixa latência, persistência, streams e consumers nativos |
-| API Gateway | **FastAPI** | MIT | Async Python, OpenAPI automático, mesmo ecossistema do runtime |
-| CLI | **Typer** (Python) | MIT | Mesmo processo do runtime — sem serialização entre CLI e core |
+| A2A event bus | **NATS JetStream** | Apache 2.0 | Low latency, native persistence, streams and consumers |
+| API Gateway | **FastAPI** | MIT | Async Python, automatic OpenAPI, same ecosystem as runtime |
+| CLI | **Typer** (Python) | MIT | Same process as runtime — no serialization between CLI and core |
 
-### Camada de Estado
+### State Layer
 
-| Papel | Tecnologia | Licença | Decisão |
+| Role | Technology | License | Decision |
 |---|---|---|---|
-| Step Store (quente) | **Redis** | BSD 3-Clause | Estado de steps em execução, TTL automático, pub/sub para notificações |
-| Step Store (arquivo) | **PostgreSQL** | PostgreSQL License | Persistência durável, replay, auditoria |
-| Registry vetorial | **Redis Stack** (RediSearch) | RSALv2 / SSPL | Vector similarity search para affinity scoring do Emergent Router |
-| Registry metadados | **PostgreSQL** | PostgreSQL License | Ownership, versioning, lineage dos agentes |
-| Knowledge / RAG | **pgvector** | PostgreSQL License | Namespaces de RAG sobre o Postgres existente — zero infra extra |
-| Cache | **Redis** | BSD 3-Clause | Compartilhado com Step Store quente |
+| Step Store (hot) | **Redis** | BSD 3-Clause | In-flight step state, automatic TTL, pub/sub for notifications |
+| Step Store (archive) | **PostgreSQL** | PostgreSQL License | Durable persistence, replay, audit trail |
+| Vector registry | **Redis Stack** (RediSearch) | RSALv2 / SSPL | Vector similarity search for Emergent Router affinity scoring |
+| Metadata registry | **PostgreSQL** | PostgreSQL License | Agent ownership, versioning, and lineage |
+| Knowledge / RAG | **pgvector** | PostgreSQL License | RAG namespaces on existing Postgres — zero extra infra |
+| Cache | **Redis** | BSD 3-Clause | Shared with hot Step Store |
 
-### Camada de Observabilidade
+### Observability Layer
 
-| Papel | Tecnologia | Licença | Decisão |
+| Role | Technology | License | Decision |
 |---|---|---|---|
-| LLM tracing | **Langfuse** | MIT | Tracing nativo de LLM, OSS self-hostável |
-| Instrumentação | **OpenTelemetry** | Apache 2.0 | Padrão de mercado, vendor-neutral |
-| Métricas | **Prometheus** | Apache 2.0 | Pull-based, integra com Langfuse e NATS |
-| Dashboards | **Grafana** | AGPL 3.0 | Self-hostável, data sources nativos |
+| LLM tracing | **Langfuse** | MIT | Native LLM tracing, OSS self-hostable |
+| Instrumentation | **OpenTelemetry** | Apache 2.0 | Industry standard, vendor-neutral |
+| Metrics | **Prometheus** | Apache 2.0 | Pull-based, integrates with Langfuse and NATS |
+| Dashboards | **Grafana** | AGPL 3.0 | Self-hostable, native data sources |
 
-### Camada de Segurança
+### Security Layer
 
-| Papel | Tecnologia | Licença | Decisão |
+| Role | Technology | License | Decision |
 |---|---|---|---|
-| Autorização relacional | **OpenFGA** | Apache 2.0 | Blast radius enforcement, MCP scopes, knowledge ACLs |
-| Identity provider | **Keycloak** | Apache 2.0 | OIDC/OAuth2 para CLI, Portal e API |
+| Relational authorization | **OpenFGA** | Apache 2.0 | Blast radius enforcement, MCP scopes, knowledge ACLs |
+| Identity provider | **Keycloak** | Apache 2.0 | OIDC/OAuth2 for CLI, Portal, and API |
 
-### Modelos LLM (pesos abertos)
+### LLM Models (open weights)
 
-| Modelo | Licença | Uso |
+| Model | License | Use |
 |---|---|---|
-| Llama 3 70B (Meta) | Llama 3 Community | Agente de propósito geral — padrão nos experimentos |
-| Mistral 7B | Apache 2.0 | Agente leve, baixo custo |
-| DeepSeek-R1 32B | MIT | Tarefas de raciocínio complexo |
+| Llama 3 70B (Meta) | Llama 3 Community | General-purpose agent — default in experiments |
+| Mistral 7B | Apache 2.0 | Lightweight agent, low cost |
+| DeepSeek-R1 32B | MIT | Complex reasoning tasks |
 | Qwen2 | Apache 2.0 | Multilingual |
 
-### Infraestrutura
+### Infrastructure
 
-| Papel | Tecnologia | Licença | Decisão |
+| Role | Technology | License | Decision |
 |---|---|---|---|
-| Containers | **Docker Compose** | Apache 2.0 | Modo local/experimentos |
-| Orquestração | **Kubernetes + Helm** | Apache 2.0 | Modo cluster e produção |
+| Containers | **Docker Compose** | Apache 2.0 | Local / experiment mode |
+| Orchestration | **Kubernetes + Helm** | Apache 2.0 | Cluster and production mode |
 
 ---
 
-## Diagrama de Dependências
+## Dependency Diagram
 
 ```
 CLI (Typer)
@@ -85,8 +85,8 @@ FastAPI ────────────────────────
 Core Runtime (LangGraph)                      Registry API
     │                                          │
     ├── NATS JetStream (A2A events)            ├── Redis Stack (vector search)
-    ├── Redis (step store quente)              └── PostgreSQL (metadados)
-    ├── PostgreSQL (step store arquivo)
+    ├── Redis (hot step store)                 └── PostgreSQL (metadata)
+    ├── PostgreSQL (step archive)
     ├── pgvector (RAG namespaces)
     ├── OpenFGA (blast radius)
     └── Langfuse + OTel (observability)
@@ -94,21 +94,21 @@ Core Runtime (LangGraph)                      Registry API
 
 ---
 
-## Critério de Avaliação para Novas Dependências
+## Evaluation Criteria for New Dependencies
 
-Antes de adicionar qualquer tecnologia ao projeto:
+Before adding any technology to the project:
 
-1. **Licença OSI-approved?** (MIT, Apache 2.0, BSD, GPL, MPL)
-2. **Self-hostável sem restrições de uso?**
-3. **Sem dependência de API key ou serviço externo obrigatório?**
-4. **Código-fonte disponível e auditável?**
+1. **OSI-approved license?** (MIT, Apache 2.0, BSD, GPL, MPL)
+2. **Self-hostable without usage restrictions?**
+3. **No mandatory API key or external service dependency?**
+4. **Source code available and auditable?**
 
-Se qualquer resposta for **não** → tecnologia não é aprovada.
+If any answer is **no** → technology is not approved.
 
-> **Nota Redis Stack:** A licença RSALv2/SSPL restringe uso como serviço gerenciado, mas permite self-hosting sem restrição. Aprovado para uso no artefato.
+> **Redis Stack note:** The RSALv2/SSPL license restricts use as a managed service, but allows unrestricted self-hosting. Approved for use in the artifact.
 
 ---
 
-## Nota sobre Comparação com Proprietários
+## Note on Comparison with Proprietary Systems
 
-O paper **pode e deve** comparar os resultados com sistemas proprietários (Agent 365, LangSmith, GPT-4o) como baseline de mercado na seção de discussão. Isso fortalece a relevância do trabalho sem criar dependência técnica.
+The paper **can and should** compare results with proprietary systems (Agent 365, LangSmith, GPT-4o) as market baselines in the discussion section. This strengthens the relevance of the work without creating a technical dependency.

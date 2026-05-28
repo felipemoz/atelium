@@ -1,307 +1,307 @@
-# Proposta de Dissertação de Mestrado
+# Master's Dissertation Proposal
 
-## Título
+## Title
 
 **Fault-Tolerant Agent Networks: A Layered Resilience Model for Multi-Agent LLM Systems**
 
-*Título alternativo em PT-BR:*
-**Redes de Agentes Tolerantes a Falhas: Um Modelo de Resiliência em Camadas para Sistemas Multi-Agente**
+---
+
+## 1. Motivation
+
+LLM-based agents execute real-world actions: they send emails, write to databases, create tickets, debit accounts, and publish messages. Unlike traditional code, these actions frequently **cannot be undone**.
+
+Popular frameworks like LangGraph, CrewAI, OpenClaw, and Hermes Agent treat action execution as an atomic primitive — with no distinction between reversible and irreversible actions, no compensation mechanism on failure, and no declared success or transition criteria between agents.
+
+The practical result is twofold: when an agent fails, the system is left in an **inconsistent state with no recovery mechanism**; when an agent produces invalid output but transitions anyway, the failure **propagates silently across the entire downstream network**.
+
+Mature distributed systems solved analogous problems decades ago — TCP/IP with retry and acknowledgment, databases with transactional rollback, Kubernetes with liveness probes and restart policies. None of these principles have been systematically applied to LLM agent networks.
+
+This work proposes that **fault tolerance in agent networks is a systems engineering problem, not a prompt engineering problem** — and that the same resilience principles established in distributed systems can be adapted to produce robust agent networks with minimal dependency on human intervention.
 
 ---
 
-## 1. Motivação
+## 2. Central Thesis
 
-Agentes baseados em LLMs executam ações no mundo real: enviam emails, gravam em bancos de dados, criam tickets, debitam contas, publicam mensagens. Diferente de código tradicional, essas ações têm efeitos que frequentemente **não podem ser desfeitos**.
-
-Frameworks populares como LangGraph, CrewAI, OpenClaw e Hermes Agent tratam a execução de ações como primitiva atômica — sem distinção entre ações reversíveis e irreversíveis, sem mecanismo de compensação em caso de falha, e sem critérios declarados de sucesso ou transição entre agentes.
-
-O resultado prático é duplo: quando um agente falha, o sistema fica em **estado inconsistente sem mecanismo de recuperação**; quando um agente produz output inválido mas transita mesmo assim, a falha **propaga silenciosamente por toda a rede downstream**.
-
-Sistemas distribuídos maduros resolveram problemas análogos há décadas — TCP/IP com retry e acknowledgment, bancos de dados com rollback transacional, Kubernetes com liveness probes e restart policies. Nenhum desses princípios foi sistematicamente aplicado a redes de agentes LLM.
-
-Este trabalho propõe que **tolerância a falhas em redes de agentes é um problema de engenharia de sistemas, não de engenharia de prompts** — e que os mesmos princípios de resiliência estabelecidos em sistemas distribuídos podem ser adaptados para produzir redes de agentes robustas, com mínima dependência de intervenção humana.
+> **LLM agent networks lack fault tolerance by design. The absence of declared success criteria, self-healing mechanisms, and compensation primitives forces excessive dependency on human intervention and produces irrecoverable inconsistent state. A layered resilience model — Transition Guard → Self-Healing → SAGA-A → HITL — can make agent networks as robust as mature distributed systems.**
 
 ---
 
-## 2. Tese Central
+## 3. Research Problem
 
-> **Redes de agentes LLM carecem de tolerância a falhas por design. A ausência de critérios de sucesso declarados, mecanismos de self-healing e primitivas de compensação força dependência excessiva de intervenção humana e produz estado inconsistente irrecuperável. Um modelo de resiliência em camadas — Transition Guard → Self-Healing → SAGA-A → HITL — pode tornar redes de agentes tão robustas quanto sistemas distribuídos maduros.**
+**Main Question:**
+> How can a layered resilience model — composed of Transition Guards, iterative self-healing, SAGA-A, and selective HITL — make LLM agent networks fault-tolerant, reducing state inconsistency and dependency on human intervention?
 
----
+**Secondary Questions:**
 
-## 3. Problema de Pesquisa
-
-**Questão Principal:**
-> Como um modelo de resiliência em camadas — composto por Transition Guards, self-healing iterativo, SAGA-A e HITL seletivo — pode tornar redes de agentes LLM tolerantes a falhas, reduzindo inconsistência de estado e dependência de intervenção humana?
-
-**Questões Secundárias:**
-
-1. Quais categorias de ações executadas por agentes são irreversíveis por natureza, e como classificá-las?
-2. Os frameworks multi-agente atuais oferecem primitivas de tolerância a falhas? Se não, qual é o custo mensurável dessa ausência?
-3. Critérios de sucesso declarados combinados com self-healing reduzem a superfície de ambiguidade que requer julgamento humano?
-4. Um modelo de resiliência em camadas produz processos mensuravelmente mais robustos do que frameworks sem essas primitivas?
-5. Em redes de larga escala sem coreografia pré-definida, roteamento probabilístico por afinidade de capacidade produz composição emergente viável e auditável?
-6. Qual é o comportamento de SAGA-A em topologias N:1 com falha parcial, e como a estratégia de agregação declarada (wait_all, quorum, best_effort) afeta a extensão da compensação?
+1. Which categories of actions executed by agents are inherently irreversible, and how can they be classified?
+2. Do current multi-agent frameworks offer fault-tolerance primitives? If not, what is the measurable cost of their absence?
+3. Do declared success criteria combined with self-healing reduce the ambiguity surface that requires human judgment?
+4. Does a layered resilience model produce measurably more robust processes than frameworks without these primitives?
+5. In large-scale networks without pre-defined choreography, does probabilistic routing by capability affinity produce viable and auditable emergent composition?
+6. What is the behavior of SAGA-A in N:1 topologies with partial failure, and how does the declared aggregation strategy (wait_all, quorum, best_effort) affect the scope of compensation?
 
 ---
 
-## 4. Hipóteses
+## 4. Hypotheses
 
-**H1:** Os principais frameworks multi-agente não possuem primitivas nativas de compensação ou rollback de estado distribuído.
+**H1:** Major multi-agent frameworks do not have native compensation or distributed state rollback primitives.
 
-**H2:** É possível definir uma taxonomia de irreversibilidade para ações de agentes com pelo menos três categorias distintas (reversível, compensável, irreversível).
+**H2:** It is possible to define an irreversibility taxonomy for agent actions with at least three distinct categories (reversible, compensable, irreversible).
 
-**H3:** A ausência de compensating actions produz inconsistência de estado mensurável em workflows multi-agente sob condições de falha induzida.
+**H3:** The absence of compensating actions produces measurable state inconsistency in multi-agent workflows under induced failure conditions.
 
-**H4:** Uma extensão do padrão SAGA (SAGA-A) pode reduzir a taxa de inconsistência de estado em workflows agenticos sem comprometer throughput significativamente.
+**H4:** An extension of the SAGA pattern (SAGA-A) can reduce the state inconsistency rate in agentic workflows without significantly compromising throughput.
 
-**H5:** A ausência de critérios de transição declarados (Transition Guards) é uma causa primária de propagação de falha em redes de agentes — tarefas incompletas transitam para agentes downstream que assumem pré-condições não satisfeitas, corrompendo o estado de toda a rede subsequente.
+**H5:** The absence of declared transition criteria (Transition Guards) is a primary cause of failure propagation in agent networks — incomplete tasks transition to downstream agents that assume unsatisfied preconditions, corrupting the state of all subsequent agents.
 
-**H6:** A declaração explícita de critérios de sucesso combinada com loops de self-healing reduz a necessidade de Human-in-the-Loop (HITL) em proporção direta à cobertura dos critérios — quanto mais completo o contrato da tarefa, menor a superfície de ambiguidade que requer julgamento humano.
+**H6:** The explicit declaration of success criteria combined with self-healing loops reduces the need for Human-in-the-Loop (HITL) in direct proportion to criteria coverage — the more complete the task contract, the smaller the ambiguity surface requiring human judgment.
 
-**H7:** Em topologias N:1, a estratégia de agregação declarada (wait_all, quorum, best_effort) determina o trade-off entre consistência do output e resiliência a falhas parciais — e a ausência de declaração explícita produz comportamento indefinido mensurável como taxa de inconsistência.
+**H7:** In N:1 topologies, the declared aggregation strategy (wait_all, quorum, best_effort) determines the trade-off between output consistency and resilience to partial failures — and the absence of explicit declaration produces undefined behavior measurable as an inconsistency rate.
 
-**H8:** Acoplar memória ao step em vez de ao agente — tornando agentes stateless — é condição necessária para roteamento emergente viável: agentes descobertos dinamicamente só podem processar tarefas de forma coerente se o step carregar todo o contexto necessário.
+**H8:** Coupling memory to the step rather than the agent — making agents stateless — is a necessary condition for viable emergent routing: dynamically discovered agents can only process tasks coherently if the step carries all required context.
 
 ---
 
-## 4.1 Modelo de Resiliência em Camadas (contribuição central)
+## 4.1 Layered Resilience Model (Central Contribution)
 
-O modelo proposto opera em quatro níveis progressivos. Cada nível só é acionado se o anterior não resolveu a falha:
+The proposed model operates on four progressive levels. Each level is only activated if the previous one failed to resolve the failure:
 
 ```
-NÍVEL 1 — Self-Healing (local, automático)
-  Agente detecta output inválido contra success_criteria
-  Itera com feedback do erro como contexto adicional
-  Resolve: falhas técnicas e ambiguidade baixa
-  Análogo a: gradient descent, retry com backoff
+LEVEL 1 — Self-Healing (local, automatic)
+  Agent detects invalid output against success_criteria
+  Iterates with error feedback as additional context
+  Resolves: technical failures and low ambiguity
+  Analogous to: gradient descent, retry with backoff
 
-NÍVEL 2 — Transition Guard (fronteira, automático)
-  Bloqueia transição se output não satisfaz transition_guard
-  Aciona SAGA-A se max_iterations esgotado
-  Resolve: impede propagação downstream de output inválido
-  Análogo a: acknowledgment no TCP, conflict detection no Git
+LEVEL 2 — Transition Guard (boundary, automatic)
+  Blocks transition if output does not satisfy transition_guard
+  Triggers SAGA-A if max_iterations exhausted
+  Resolves: prevents downstream propagation of invalid output
+  Analogous to: TCP acknowledgment, Git conflict detection
 
-NÍVEL 3 — SAGA-A (compensação, automático)
-  Executa compensating_actions em ordem inversa
-  Restaura consistência do estado distribuído
-  Resolve: efeitos colaterais já executados upstream
-  Análogo a: rollback transacional em bancos ACID
+LEVEL 3 — SAGA-A (compensation, automatic)
+  Executes compensating_actions in reverse order
+  Restores distributed state consistency
+  Resolves: side effects already executed upstream
+  Analogous to: transactional rollback in ACID databases
 
-NÍVEL 4 — HITL (arbitragem, humano)
-  Acionado apenas para ambiguidade genuína de domínio
-  ou ações marcadas como irreversíveis com alto impacto
-  Resolve: o que nenhum critério declarado consegue cobrir
-  Análogo a: escalação para especialista em SRE
+LEVEL 4 — HITL (arbitration, human)
+  Triggered only for genuine domain ambiguity
+  or actions marked irreversible with high impact
+  Resolves: what no declared criterion can cover
+  Analogous to: escalation to SRE specialist
 ```
 
-**Propriedade emergente:** O processo não para em caso de falha — ele **degrada graciosamente**, contendo o dano no nível mais baixo possível antes de envolver o humano.
+**Emergent property:** The process does not stop on failure — it **degrades gracefully**, containing damage at the lowest possible level before involving a human.
 
-| Comparação | Sem o modelo | Com o modelo |
+| Comparison | Without the model | With the model |
 |---|---|---|
-| Falha técnica | HITL imediato | Self-healing resolve |
-| Output inválido propagado | Corrompe downstream | Bloqueado no guard |
-| Estado inconsistente | Irrecuperável | SAGA-A compensa |
-| HITL | Verificador de qualidade | Árbitro de ambiguidade |
+| Technical failure | Immediate HITL | Self-healing resolves |
+| Propagated invalid output | Corrupts downstream | Blocked at the guard |
+| Inconsistent state | Irrecoverable | SAGA-A compensates |
+| HITL | Quality checker | Ambiguity arbiter |
 
 ---
 
-## 5. Taxonomia de Irreversibilidade (rascunho)
+## 5. Irreversibility Taxonomy
 
-| Categoria | Definição | Exemplos | Estratégia |
+| Category | Definition | Examples | Strategy |
 |---|---|---|---|
-| **Reversível** | Ação pode ser desfeita com fidelidade total | Rascunho salvo, registro em DB sem commit | Rollback direto |
-| **Compensável** | Ação não pode ser desfeita, mas pode ser compensada semanticamente | Ticket criado → fechar ticket; CRM gravado → deletar registro | Compensating action |
-| **Irreversível** | Nem reversão nem compensação são possíveis | Email enviado, Slack postado, pagamento executado | Dry-run gate + aprovação humana antes |
+| **Reversible** | Action can be fully undone | Saved draft, uncommitted DB record | Direct rollback |
+| **Compensable** | Action cannot be undone but effect can be offset | Ticket created → close ticket; CRM written → delete record | Compensating action |
+| **Irreversible** | Neither reversal nor compensation is possible | Email sent, Slack posted, payment executed | Dry-run gate + human approval before execution |
 
-Esta taxonomia é uma contribuição original — não existe na literatura de MAS ou LLM agents.
+This taxonomy is an original contribution — it does not exist in the MAS or LLM agents literature.
 
 ---
 
-## 6. Fundamentação Teórica: Redes de Agentes como Analogia a Redes Neurais
+## 6. Theoretical Foundation: Agent Networks as a Neural Network Analogy
 
-### 6.1 A Analogia Estrutural
+### 6.1 The Structural Analogy
 
-Redes neurais artificiais emergiram do encadeamento de unidades simples — neurônios individuais com capacidade computacional limitada cuja **inteligência surge da composição**, não do elemento isolado. Sistemas multi-agente seguem o mesmo princípio: agentes especializados e limitados produzem comportamento emergente quando encadeados.
+Artificial neural networks emerged from the chaining of simple units — individual neurons with limited computational capacity whose **intelligence emerges from composition**, not from the isolated element. Multi-agent systems follow the same principle: specialized, limited agents produce emergent behavior when chained.
 
-A analogia, porém, revela uma assimetria crítica:
+The analogy, however, reveals a critical asymmetry:
 
-> *Redes neurais possuem mecanismo de correção retroativa (backpropagation). Redes de agentes não possuem equivalente — cada ação executada no mundo real é potencialmente irreversível.*
+> *Neural networks have a retroactive correction mechanism (backpropagation). Agent networks have no equivalent — every action executed in the real world is potentially irreversible.*
 
 ```
-Rede neural:     forward pass → erro mensurado → backward pass → correção dos pesos
-Rede de agentes: forward pass → ação no mundo → erro → estado inconsistente irrecuperável
+Neural network:  forward pass → measured error → backward pass → weight correction
+Agent network:   forward pass → world action  → error → irrecoverable inconsistent state
 ```
 
-SAGA-A, proposto neste trabalho, é uma forma primitiva de "backward pass" para agentes — não corrige o raciocínio, mas **desfaz os efeitos colaterais no mundo real**.
+SAGA-A, proposed in this work, is a primitive form of "backward pass" for agents — it does not correct the reasoning, but **undoes the real-world side effects**.
 
-### 6.2 Topologias de Encadeamento
+### 6.2 Chaining Topologies
 
-A topologia do encadeamento determina as propriedades emergentes do sistema — e os padrões de falha:
+The chaining topology determines the emergent properties of the system — and the failure patterns:
 
-| Topologia Neural | Topologia Agentica | Propriedade | Padrão de Falha |
+| Neural Topology | Agentic Topology | Property | Failure Pattern |
 |---|---|---|---|
-| Sequencial (feedforward) | Pipeline linear A→B→C | Previsível, auditável | Falha propaga para frente irreversivelmente |
-| Paralela | Fan-out A→B, A→C | Throughput, redundância | Resultados divergentes sem reconciliação |
-| Recorrente | Loop com feedback A→B→A | Memória, iteração | Loops infinitos, amplificação de erro |
-| Residual (skip connection) | Bypass condicional | Resiliência a falha de nó | Análogo ao Circuit Breaker pattern |
+| Sequential (feedforward) | Linear pipeline A→B→C | Predictable, auditable | Failure propagates forward irreversibly |
+| Parallel | Fan-out A→B, A→C | Throughput, redundancy | Divergent results without reconciliation |
+| Recurrent | Feedback loop A→B→A | Memory, iteration | Infinite loops, error amplification |
+| Residual (skip connection) | Conditional bypass | Node failure resilience | Analogous to Circuit Breaker pattern |
 
-A topologia **residual** é especialmente relevante: as skip connections do ResNet — que permitem que o gradiente "pule" camadas problemáticas — têm correspondência direta com o padrão Circuit Breaker em agentes, onde um agente com falha pode ser contornado sem interromper o pipeline.
+The **residual** topology is especially relevant: ResNet's skip connections — which allow the gradient to "skip" problematic layers — have a direct correspondence with the Circuit Breaker pattern in agents, where a failing agent can be bypassed without interrupting the pipeline.
 
-### 6.3 Emergência e Composição
+### 6.3 Emergence and Composition
 
-Em redes neurais profundas, camadas iniciais detectam padrões simples (bordas, texturas) e camadas subsequentes compõem representações complexas (rostos, objetos). O mesmo princípio de **composição hierárquica** aparece em redes de agentes:
+In deep neural networks, early layers detect simple patterns (edges, textures) and subsequent layers compose complex representations (faces, objects). The same principle of **hierarchical composition** appears in agent networks:
 
 ```
-Camada 1 (agentes especializados):
+Layer 1 (specialized agents):
   Extractor → Classifier → Summarizer
 
-Camada 2 (agentes de composição):
+Layer 2 (composition agents):
   Reviewer → Validator → Approver
 
-Camada 3 (agentes de orquestração):
+Layer 3 (orchestration agents):
   Supervisor → Router → Notifier
 ```
 
-A diferença fundamental: em redes neurais, a composição é **diferenciável e corrigível**. Em redes de agentes, cada camada pode produzir **efeitos colaterais irreversíveis** antes que o erro na camada seguinte seja detectado.
+The fundamental difference: in neural networks, composition is **differentiable and correctable**. In agent networks, each layer can produce **irreversible side effects** before an error in the next layer is detected.
 
-Esta é a motivação formal para o problema central desta dissertação.
+This is the formal motivation for the central problem of this dissertation.
 
 ---
 
-## 7. Metodologia
+## 7. Methodology
 
-### 7.1 Análise de Frameworks (Estudo 1)
+### 7.1 Framework Analysis (Study 1)
 
-**Objetivo:** Verificar H1 empiricamente.
+**Objective:** Empirically verify H1.
 
-**Método:**
-- Análise estática do código-fonte de LangGraph, CrewAI, OpenClaw, Hermes Agent
-- Protocolo de análise: presença de (a) compensating actions, (b) rollback de estado, (c) distinção reversível/irreversível, (d) dry-run mode
-- Resultado esperado: matriz de capacidades por framework
+**Method:**
+- Static analysis of LangGraph, CrewAI, AutoGen source code
+- Analysis protocol: presence of (a) compensating actions, (b) state rollback, (c) reversible/irreversible distinction, (d) dry-run mode
+- Expected result: capability matrix per framework
 
-**Artefato:** Tabela comparativa publicável como parte da revisão do estado da arte.
+**Artifact:** Comparative table publishable as part of the state-of-the-art review.
 
-### 7.2 Experimentos de Falha Induzida (Estudo 2)
+### 7.2 Induced Failure Experiments (Study 2)
 
-**Objetivo:** Verificar H3 — medir custo da ausência de compensação.
+**Objective:** Verify H3 — measure the cost of absent compensation.
 
 **Setup:**
-- Workflow multi-agente com 4 agentes em sequência
-- Falha injetada em posições distintas (agente 2, 3, 4)
-- Métricas: taxa de inconsistência de estado, tempo de detecção, tempo de recuperação manual
+- Multi-agent workflow with 4 agents in sequence
+- Failure injected at distinct positions (agents 2, 3, 4)
+- Metrics: state inconsistency rate, detection time, manual recovery time
 
-**Baseline:** frameworks sem SAGA-A
-**Tratamento:** mesmo workflow com SAGA-A implementado
+**Baseline:** frameworks without SAGA-A
+**Treatment:** same workflow with SAGA-A implemented
 
-### 7.3 Implementação de SAGA-A (Artefato)
+### 7.3 SAGA-A Implementation (Artifact)
 
-Extensão do padrão SAGA com três primitivas novas:
+Extension of the SAGA pattern with three new primitives:
 
 ```
 1. irreversibility_class: reversible | compensable | irreversible
-2. compensating_action: declarado no manifesto do agente
-3. dry_run_gate: execução simulada obrigatória antes de ações irreversíveis
+2. compensating_action: declared in the agent manifest
+3. dry_run_gate: mandatory simulated execution before irreversible actions
 ```
 
-Implementação de referência OSS integrada ao Agent Manifest.
+OSS reference implementation integrated into the Agent Manifest.
 
-### 7.4 Validação (Estudo 3)
+### 7.4 Validation (Study 3)
 
-**Objetivo:** Verificar H4 — SAGA-A reduz inconsistência sem custo proibitivo.
+**Objective:** Verify H4 — SAGA-A reduces inconsistency without prohibitive cost.
 
-**Método:** Experimento controlado comparando workflows com e sem SAGA-A.
+**Method:** Controlled experiment comparing workflows with and without SAGA-A.
 
-**Métricas:**
-- Taxa de inconsistência de estado após falha
-- Latência adicional introduzida por compensating actions
-- Cobertura de cenários de falha (% de falhas detectadas e compensadas)
+**Metrics:**
+- State inconsistency rate after failure
+- Additional latency introduced by compensating actions
+- Failure scenario coverage (% of failures detected and compensated)
 
 ---
 
-## 7. Contribuições Originais
+## 8. Original Contributions
 
-1. **Modelo de Resiliência em Camadas** — composição de Transition Guard, Self-Healing, SAGA-A e HITL como sistema de tolerância a falhas para redes de agentes
-2. **Taxonomia de irreversibilidade** — primeira formalização das categorias de ações de agentes (reversível, compensável, irreversível)
-3. **Transition Guard com Self-Healing** — primitiva de contrato declarativo com loop de correção iterativa antes de escalar
-4. **SAGA-A** — extensão do padrão SAGA para workflows agenticos com não-determinismo, ações irreversíveis e topologias N:1
-5. **Emergent Routing** — terceiro modo de composição além de orquestração e coreografia: roteamento probabilístico por afinidade de capacidade em redes de larga escala
-6. **Network Topologies (1:N, N:1)** — padrões de delegação e agregação com estratégias declaradas de tolerância a falha parcial
-7. **Step-Coupled Memory** — separação entre agente stateless e step stateful como condição para roteamento emergente e replay nativo
-8. **Análise empírica de frameworks** — evidência de que frameworks atuais carecem de tolerância a falhas nativa
-9. **Agent Manifest** — especificação declarativa OSS que unifica todas as primitivas propostas
-
----
-
-## 8. Estrutura da Dissertação
-
-```
-Cap. 1 — Introdução
-  Motivação, problema, tese, contribuições, estrutura
-
-Cap. 2 — Fundamentação Teórica
-  2.1 Agentes LLM: definição, capacidades, limitações
-  2.2 Tolerância a falhas em sistemas distribuídos: SAGA, retry, circuit breaker, idempotência
-  2.3 Multi-Agent Systems: MAS clássico vs. LLM agents
-  2.4 Redes de agentes como analogia a redes neurais: composição, emergência e ausência de backpropagation
-
-Cap. 3 — Revisão Sistemática de Literatura
-  Estado da arte em frameworks multi-agente — análise de primitivas de tolerância a falhas
-
-Cap. 4 — Taxonomia de Irreversibilidade (contribuição 1)
-  Definição formal das categorias, critérios de classificação
-
-Cap. 5 — Análise de Frameworks (contribuição 2)
-  Metodologia, resultados, matriz comparativa
-
-Cap. 6 — SAGA-A: Extensão para Agentes (contribuição 3)
-  Especificação formal, Agent Manifest, casos de uso
-
-Cap. 7 — Experimentos e Resultados (contribuições 4-5)
-  Setup, execução, análise, ameaças à validade
-
-Cap. 8 — Discussão
-  Implicações, limitações, trabalhos futuros
-
-Cap. 9 — Conclusão
-```
+1. **Layered Resilience Model** — composition of Transition Guard, Self-Healing, SAGA-A, and HITL as a fault-tolerance system for agent networks
+2. **Irreversibility Taxonomy** — first formalization of agent action categories (reversible, compensable, irreversible)
+3. **Transition Guard with Self-Healing** — declarative contract primitive with iterative correction loop before escalation
+4. **SAGA-A** — extension of the SAGA pattern for agentic workflows with non-determinism, irreversible actions, and N:1 topologies
+5. **Emergent Routing** — third composition mode beyond orchestration and choreography: probabilistic routing by capability affinity in large-scale networks
+6. **Network Topologies (1:N, N:1)** — delegation and aggregation patterns with declared partial failure tolerance strategies
+7. **Step-Coupled Memory** — separation of stateless agent and stateful step as a condition for emergent routing and native replay
+8. **Empirical framework analysis** — evidence that current frameworks lack native fault tolerance
+9. **Agent Manifest** — declarative OSS specification that unifies all proposed primitives
 
 ---
 
-## 9. Cronograma
+## 9. Dissertation Structure
 
-| Fase | Atividade | Duração |
+```
+Ch. 1 — Introduction
+  Motivation, problem, thesis, contributions, structure
+
+Ch. 2 — Theoretical Foundation
+  2.1 LLM agents: definition, capabilities, limitations
+  2.2 Fault tolerance in distributed systems: SAGA, retry, circuit breaker, idempotency
+  2.3 Multi-Agent Systems: classical MAS vs. LLM agents
+  2.4 Agent networks as neural network analogy: composition, emergence, and absence of backpropagation
+
+Ch. 3 — Systematic Literature Review
+  State of the art in multi-agent frameworks — fault-tolerance primitive analysis
+
+Ch. 4 — Irreversibility Taxonomy (contribution 1)
+  Formal definition of categories, classification criteria
+
+Ch. 5 — Framework Analysis (contribution 2)
+  Methodology, results, comparative matrix
+
+Ch. 6 — SAGA-A: Extension for Agents (contribution 3)
+  Formal specification, Agent Manifest, use cases
+
+Ch. 7 — Atelium: Reference Platform (contribution 4)
+  OSS implementation, architecture, experiment execution
+
+Ch. 8 — Experiments and Results (contributions 5–9)
+  Setup, execution, analysis, threats to validity
+
+Ch. 9 — Discussion
+  Implications, limitations, future work
+
+Ch. 10 — Conclusion
+```
+
+---
+
+## 10. Timeline
+
+| Phase | Activity | Duration |
 |---|---|---|
-| 1 | Revisão sistemática de literatura | 2 meses |
-| 2 | Análise de frameworks (Estudo 1) | 1 mês |
-| 3 | Taxonomia de irreversibilidade | 1 mês |
-| 4 | Especificação SAGA-A + Agent Manifest | 2 meses |
-| 5 | Implementação OSS de referência | 2 meses |
-| 6 | Experimentos (Estudos 2 e 3) | 2 meses |
-| 7 | Escrita, revisão, defesa | 2 meses |
-| **Total** | | **~12 meses** |
+| 1 | Systematic literature review | 2 months |
+| 2 | Framework analysis (Study 1) | 1 month |
+| 3 | Irreversibility taxonomy | 1 month |
+| 4 | SAGA-A specification + Agent Manifest | 2 months |
+| 5 | OSS reference implementation | 2 months |
+| 6 | Experiments (Studies 2 and 3) | 2 months |
+| 7 | Writing, review, defense | 2 months |
+| **Total** | | **~12 months** |
 
 ---
 
-## 10. Venues de Publicação
+## 11. Publication Venues
 
-**Alvo principal:**
+**Primary targets:**
 - ICSE 2027 — International Conference on Software Engineering
 - FSE 2027 — Foundations of Software Engineering
 
-**Alternativos:**
+**Alternatives:**
 - ICSOC — Service-Oriented Computing
 - Journal of Systems and Software (Elsevier)
 
-**Paper intermediário (cap. 5 isolado):**
-- MSR — Mining Software Repositories (análise de frameworks OSS)
+**Intermediate paper (Ch. 5 standalone):**
+- MSR — Mining Software Repositories (OSS framework analysis)
 
 ---
 
-## 11. Referências Iniciais
+## 12. Initial References
 
 - Garcia-Molina, H., & Salem, K. (1987). Sagas. *ACM SIGMOD Record*, 16(3), 249–259.
-- Richardson, C. (2018). *Microservices Patterns*. Manning. Cap. 4.
+- Richardson, C. (2018). *Microservices Patterns*. Manning. Ch. 4.
 - Yao, S. et al. (2022). ReAct: Synergizing Reasoning and Acting in Language Models. *arXiv:2210.03629*.
 - Wooldridge, M., & Jennings, N. (1995). Intelligent agents: Theory and practice. *Knowledge Engineering Review*, 10(2).
 - Chase, N. et al. (2024). Model Context Protocol Specification. Anthropic / Linux Foundation.
@@ -310,3 +310,4 @@ Cap. 9 — Conclusão
 - Microsoft (2026). Agent 365: The Control Plane for AI Agents.
 - Hevner, A. et al. (2004). Design Science in Information Systems Research. *MIS Quarterly*, 28(1).
 - OWASP (2024). LLM Top 10 for Large Language Model Applications.
+- Wohlin, C. et al. (2012). *Experimentation in Software Engineering*. Springer.

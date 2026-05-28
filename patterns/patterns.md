@@ -1,126 +1,126 @@
-# Catálogo de Padrões Arquiteturais para Sistemas Multi-Agente
+# Architectural Pattern Catalog for Multi-Agent Systems
 
-> Status: rascunho inicial — cada padrão será expandido com contexto formal, forças, consequências e exemplos de implementação.
-
----
-
-## Padrão 1: Agent Registry
-
-**Categoria:** Infraestrutura / Descoberta
-
-**Problema:**
-Em uma organização com múltiplos agentes, nenhum mecanismo centralizado rastreia quais agentes existem, quem os criou, quais ferramentas acessam, e se estão saudáveis.
-
-**Solução:**
-Um registro central onde cada agente declara seu manifesto. O registry resolve dependências, verifica permissões e expõe um catálogo pesquisável.
-
-**Analogia em sistemas distribuídos:** Consul, Backstage, Kubernetes API Server
-
-**Componentes:**
-- Agent Manifest (declaração)
-- Registry API (CRUD de agentes)
-- Health Check Endpoint por agente
-- Diff de permissões em pull requests
-
-**Forças:**
-- Visibilidade de toda a frota
-- Prevenção de duplicação ("já existe um agente que faz isso")
-- Base para governança e auditoria
-
-**Consequências:**
-- Single point of truth (requer alta disponibilidade)
-- Bootstrapping problem: agentes precisam ser registrados antes de rodar
+> Status: initial draft — each pattern will be expanded with formal context, forces, consequences, and implementation examples.
 
 ---
 
-## Padrão 2: SAGA-A (SAGA para Agentes)
+## Pattern 1: Agent Registry
 
-**Categoria:** Transações Distribuídas
+**Category:** Infrastructure / Discovery
 
-**Problema:**
-Um workflow multi-agente executa ações no mundo real em sequência (grava CRM, envia email, cria ticket). Se um agente falha no meio do fluxo, o estado distribuído fica inconsistente.
+**Problem:**
+In an organization with multiple agents, no centralized mechanism tracks which agents exist, who created them, which tools they access, and whether they are healthy.
 
-**Solução:**
-Cada agente declara uma `compensating_action` no manifesto. Um SAGA coordinator (choreography via eventos ou orchestration via LLM supervisor) dispara compensações em ordem inversa em caso de falha.
+**Solution:**
+A central registry where each agent declares its manifest. The registry resolves dependencies, verifies permissions, and exposes a searchable catalog.
 
-**Analogia:** SAGA pattern (Garcia-Molina & Salem, 1987) adaptado
+**Distributed systems analogue:** Consul, Backstage, Kubernetes API Server
 
-**Extensões específicas para LLM agents (SAGA-A):**
+**Components:**
+- Agent Manifest (declaration)
+- Registry API (agent CRUD)
+- Per-agent Health Check Endpoint
+- Permission diff in pull requests
 
-| Extensão | Descrição |
+**Forces:**
+- Visibility across the entire fleet
+- Prevention of duplication ("an agent for this already exists")
+- Foundation for governance and auditability
+
+**Consequences:**
+- Single point of truth (requires high availability)
+- Bootstrapping problem: agents must be registered before running
+
+---
+
+## Pattern 2: SAGA-A (SAGA for Agents)
+
+**Category:** Distributed Transactions
+
+**Problem:**
+A multi-agent workflow executes real-world actions in sequence (writes to CRM, sends email, creates ticket). If an agent fails mid-flow, the distributed state becomes inconsistent.
+
+**Solution:**
+Each agent declares a `compensating_action` in its manifest. A SAGA coordinator (choreography via events or orchestration via LLM supervisor) triggers compensations in reverse order on failure.
+
+**Analogue:** SAGA pattern (Garcia-Molina & Salem, 1987) adapted
+
+**LLM agent-specific extensions (SAGA-A):**
+
+| Extension | Description |
 |---|---|
-| `irreversible: true` | Ação que não pode ser desfeita — exige `pre_confirmation` |
-| `compensating_action` | Ação de reversão declarada no manifesto |
-| `dry_run_gate` | Execução simulada obrigatória antes de ações de alto impacto |
-| `idempotency_key` | Cache de execução por hash(input + tool_calls) para retries seguros |
-| `cognitive_snapshot` | Snapshot do estado de memória/RAG antes da execução |
+| `irreversible: true` | Action that cannot be undone — requires `pre_confirmation` |
+| `compensating_action` | Reversal action declared in the manifest |
+| `dry_run_gate` | Mandatory simulated execution before high-impact actions |
+| `idempotency_key` | Execution cache by hash(input + tool_calls) for safe retries |
+| `cognitive_snapshot` | Snapshot of memory/RAG state before execution |
 
-**Fluxo de rollback:**
+**Rollback flow:**
 ```
-[A] → [B] → [C: FALHA]
+[A] → [B] → [C: FAILURE]
               ↓
-        saga.rollback emitido
+        saga.rollback emitted
               ↓
-        [B].compensating_action executada
+        [B].compensating_action executed
               ↓
-        [A].compensating_action executada
+        [A].compensating_action executed
 ```
 
-**Forças:**
-- Consistência eventual em workflows multi-agente
-- Sem necessidade de 2PC (incompatível com latência de LLMs)
+**Forces:**
+- Eventual consistency in multi-agent workflows
+- No need for 2PC (incompatible with LLM latency)
 
-**Consequências:**
-- Ações irreversíveis criam "pontos de não-retorno" no workflow
-- Compensações com LLMs podem produzir output diferente do esperado (non-determinism)
+**Consequences:**
+- Irreversible actions create "points of no return" in the workflow
+- LLM compensations may produce output different from expected (non-determinism)
 
 ---
 
-## Padrão 3: Connector Fabric (MCP Registry)
+## Pattern 3: Connector Fabric (MCP Registry)
 
-**Categoria:** Integração / Conectividade
+**Category:** Integration / Connectivity
 
-**Problema:**
-Cada agente conecta-se diretamente a ferramentas externas (Jira, GitHub, banco de dados) via código customizado. Sem padronização, cada integração é única, sem versionamento ou controle de escopo.
+**Problem:**
+Each agent connects directly to external tools (Jira, GitHub, database) via custom code. Without standardization, each integration is unique, with no versioning or scope control.
 
-**Solução:**
-Um registro de MCP Servers versionados, análogo ao npm. Agentes declaram dependências de conectores no manifesto com scopes explícitos. A plataforma resolve versões e injeta conexões autorizadas.
+**Solution:**
+A registry of versioned MCP Servers, analogous to npm. Agents declare connector dependencies in their manifest with explicit scopes. The platform resolves versions and injects authorized connections.
 
-**Analogia:** npm/pip para conectores; Istio para controle de tráfego
+**Analogue:** npm/pip for connectors; Istio for traffic control
 
-**Estrutura:**
+**Structure:**
 ```yaml
 mcps:
   - name: jira
     version: "^2.1"
     scopes: [read:issues, write:comments]
-    # NÃO tem: delete:issues, admin:project
+    # NOT allowed: delete:issues, admin:project
 ```
 
-**Forças:**
-- Princípio do menor privilégio por agente
-- Auditoria de quem acessa o quê
-- Breaking change detection entre versões de MCP
+**Forces:**
+- Principle of least privilege per agent
+- Audit of who accesses what
+- Breaking change detection between MCP versions
 
-**Consequências:**
-- Requer processo de review para novos scopes (pode criar atrito)
-- MCP servers precisam ser mantidos e versionados
+**Consequences:**
+- Requires a review process for new scopes (may create friction)
+- MCP servers must be maintained and versioned
 
 ---
 
-## Padrão 4: Knowledge Namespace
+## Pattern 4: Knowledge Namespace
 
-**Categoria:** Dados / RAG Compartilhado
+**Category:** Data / Shared RAG
 
-**Problema:**
-Cada agente mantém seu próprio índice vetorial. Resulta em duplicação de dados, inconsistência entre bases, e custo de ingestão multiplicado.
+**Problem:**
+Each agent maintains its own vector index. This results in data duplication, inconsistency between knowledge bases, and multiplied ingestion costs.
 
-**Solução:**
-Um Knowledge Fabric centralizado com namespaces por domínio. Agentes declaram quais namespaces podem ler. A plataforma garante isolamento e attribution de acesso.
+**Solution:**
+A centralized Knowledge Fabric with namespaces per domain. Agents declare which namespaces they may read. The platform guarantees isolation and access attribution.
 
-**Analogia:** Database schemas com row-level security; IAM policies para S3 buckets
+**Analogue:** Database schemas with row-level security; IAM policies for S3 buckets
 
-**Estrutura:**
+**Structure:**
 ```yaml
 knowledge:
   namespaces:
@@ -128,67 +128,67 @@ knowledge:
       access: read-only
     - name: compliance-br
       access: read-only
-  # NÃO tem acesso a: financial-data, hr-records
+  # NOT allowed: financial-data, hr-records
 ```
 
-**Forças:**
-- Single source of truth para knowledge organizacional
-- Custo de ingestão e embedding centralizado
-- Attribution: qual agente leu qual chunk em qual momento
+**Forces:**
+- Single source of truth for organizational knowledge
+- Centralized ingestion and embedding cost
+- Attribution: which agent read which chunk at which moment
 
-**Consequências:**
-- Multi-tenancy de RAG é tecnicamente complexo (metadata filtering não escala linearmente)
-- Requer namespace governance (quem pode criar, quem pode escrever)
+**Consequences:**
+- RAG multi-tenancy is technically complex (metadata filtering does not scale linearly)
+- Requires namespace governance (who can create, who can write)
 
 ---
 
-## Padrão 5: Agent Choreography (A2A Event-Driven)
+## Pattern 5: Agent Choreography (A2A Event-Driven)
 
-**Categoria:** Comunicação / Composição
+**Category:** Communication / Composition
 
-**Problema:**
-Em orquestração centralizada, um LLM supervisor conhece todos os agentes e decide cada passo. Isso cria acoplamento forte, latência adicional (round-trips LLM) e single point of failure.
+**Problem:**
+In centralized orchestration, an LLM supervisor knows all agents and decides each step. This creates tight coupling, additional latency (LLM round-trips), and a single point of failure.
 
-**Solução:**
-Agentes publicam eventos em um bus (NATS/Kafka). Outros agentes reagem a eventos de seu interesse. Nenhum agente central conhece o fluxo completo.
+**Solution:**
+Agents publish events to a bus (NATS). Other agents react to events of interest. No central agent knows the complete flow.
 
-**Analogia:** Event-driven microservices; Choreography vs. Orchestration (Hohpe & Woolf)
+**Analogue:** Event-driven microservices; Choreography vs. Orchestration (Hohpe & Woolf)
 
-**Quando usar choreography:**
-- Workflows com etapas bem definidas e contratos estáveis
-- Requisitos de baixa latência
-- Alta resiliência (sem SPOF)
+**When to use choreography:**
+- Workflows with well-defined steps and stable contracts
+- Low-latency requirements
+- High resilience (no SPOF)
 
-**Quando usar orchestration:**
-- Workflows abertos onde o LLM precisa raciocinar sobre o próximo passo
-- Workflows que mudam frequentemente
-- Debugging mais fácil (trace linear)
+**When to use orchestration:**
+- Open-ended workflows where the LLM needs to reason about the next step
+- Frequently changing workflows
+- Easier debugging (linear trace)
 
-**Métricas para escolha (base para Experimento E2):**
+**Decision metrics (basis for Experiment E2):**
 
-| Critério | Choreography | Orchestration |
+| Criterion | Choreography | Orchestration |
 |---|---|---|
-| Latência | Menor | Maior (round-trips LLM) |
-| Resiliência | Alta (sem SPOF) | Média (supervisor é SPOF) |
-| Flexibilidade | Baixa (contrato fixo) | Alta (LLM decide) |
-| Observabilidade | Difícil (causal tracing) | Fácil (trace linear) |
-| Custo em tokens | Menor | Maior |
+| Latency | Lower | Higher (LLM round-trips) |
+| Resilience | High (no SPOF) | Medium (supervisor is SPOF) |
+| Flexibility | Low (fixed contract) | High (LLM decides) |
+| Observability | Difficult (causal tracing) | Easy (linear trace) |
+| Token cost | Lower | Higher |
 
 ---
 
-## Padrão 6: Blast Radius Boundary
+## Pattern 6: Blast Radius Boundary
 
-**Categoria:** Segurança / Governança
+**Category:** Security / Governance
 
-**Problema:**
-Um agente comprometido, mal configurado ou com prompt injection pode propagar danos por toda a infraestrutura se não houver isolamento.
+**Problem:**
+A compromised, misconfigured, or prompt-injected agent can propagate damage across the entire infrastructure if there is no isolation.
 
-**Solução:**
-Cada agente opera dentro de um blast radius declarado — conjunto máximo de sistemas que pode afetar. A plataforma bloqueia ações fora desse escopo em runtime.
+**Solution:**
+Each agent operates within a declared blast radius — the maximum set of systems it may affect. The platform blocks out-of-scope actions at runtime.
 
-**Analogia:** Kubernetes RBAC + NetworkPolicy; AWS IAM least privilege
+**Analogue:** Kubernetes RBAC + NetworkPolicy; AWS IAM least privilege
 
-**Estrutura:**
+**Structure:**
 ```yaml
 blast_radius:
   max_write_systems: [jira, slack-channel-legal]
@@ -197,65 +197,65 @@ blast_radius:
   human_approval_required: [send_external_email, approve_contract]
 ```
 
-**Forças:**
-- Contenção de danos em caso de falha ou ataque
-- Requisito auditável para compliance (LGPD, SOC2)
+**Forces:**
+- Damage containment on failure or attack
+- Auditable requirement for compliance (LGPD, SOC2)
 
-**Consequências:**
-- Requer plataforma de enforcement em runtime (não apenas declaração)
-- Pode limitar agentes legítimos se blast radius for mal calibrado
+**Consequences:**
+- Requires a runtime enforcement platform (not just declaration)
+- May limit legitimate agents if blast radius is poorly calibrated
 
 ---
 
-## Padrão 7: Agent Manifest as Contract
+## Pattern 7: Agent Manifest as Contract
 
-**Categoria:** Governança / DevOps
+**Category:** Governance / DevOps
 
-**Problema:**
-Não há padrão para declarar o que um agente é, o que pode fazer, e quais são suas dependências. Isso impede automação de deploy, review de permissões e descoberta.
+**Problem:**
+There is no standard for declaring what an agent is, what it can do, and what its dependencies are. This prevents deployment automation, permission review, and discovery.
 
-**Solução:**
-Um formato YAML padronizado (Agent Manifest) que serve como contrato entre o agente e a plataforma. Análogo ao Dockerfile para containers ou ao Chart.yaml para Helm.
+**Solution:**
+A standardized YAML format (Agent Manifest) that serves as the contract between the agent and the platform. Analogous to Dockerfile for containers or Chart.yaml for Helm.
 
-**Especificação mínima:**
+**Minimum specification:**
 ```yaml
 apiVersion: atelium/v1alpha1
 kind: Agent
 metadata:
   name: string
-  owner: string          # time responsável
+  owner: string          # responsible team
   version: semver
 spec:
-  model: string          # llama3, mistral, qwen2 via Ollama ou vLLM (OSS only)
-  mcps: []               # conectores com scopes
-  knowledge: {}          # namespaces de RAG
-  task: {}               # critérios de sucesso, falha e transição
-  a2a: {}                # contratos de comunicação
+  model: string          # llama3, mistral, qwen2 via Ollama or vLLM (OSS only)
+  mcps: []               # connectors with scopes
+  knowledge: {}          # RAG namespaces
+  task: {}               # success, failure, and transition criteria
+  a2a: {}                # communication contracts
   saga: {}               # compensating actions
-  blast_radius: {}       # escopo máximo de impacto
+  blast_radius: {}       # maximum impact scope
   observability: {}      # telemetry settings
 ```
 
-**Forças:**
-- Base para todo o ciclo de vida: register → deploy → observe → retire
-- Permite diff de permissões em PRs ("esse agente ganhou acesso a billing-api")
-- Versionamento semântico com breaking change detection
+**Forces:**
+- Foundation for the entire lifecycle: register → deploy → observe → retire
+- Enables permission diffs in PRs ("this agent gained access to billing-api")
+- Semantic versioning with breaking change detection
 
 ---
 
-## Padrão 8: Transition Guard
+## Pattern 8: Transition Guard
 
-**Categoria:** Contratos / Composição
+**Category:** Contracts / Composition
 
-**Problema:**
-Agentes transitam para o próximo nó da rede mesmo quando sua tarefa está incompleta ou seu output não satisfaz as pré-condições do agente downstream. A tarefa incompleta propaga silenciosamente, corrompendo o estado de todos os agentes subsequentes que assumiram pré-condições não satisfeitas.
+**Problem:**
+Agents transition to the next network node even when their task is incomplete or their output does not satisfy the downstream agent's preconditions. The incomplete task propagates silently, corrupting the state of all subsequent agents that assumed unsatisfied preconditions.
 
-**Analogia neural:** Um neurônio que não atingiu o limiar de ativação não deve propagar sinal. O Transition Guard é o **threshold** da rede de agentes.
+**Neural analogue:** A neuron that has not reached its activation threshold should not propagate a signal. The Transition Guard is the **threshold** of the agent network.
 
-**Solução:**
-Cada agente declara explicitamente no manifesto: (a) o que constitui sucesso da sua tarefa, (b) o que constitui falha, e (c) a condição que deve ser verdadeira para transitar para o próximo agente. A plataforma bloqueia a transição se o guard não for satisfeito e aciona SAGA-A automaticamente.
+**Solution:**
+Each agent explicitly declares in its manifest: (a) what constitutes success for its task, (b) what constitutes failure, and (c) the condition that must be true to transition to the next agent. The platform blocks the transition if the guard is not satisfied and automatically triggers SAGA-A.
 
-**Especificação:**
+**Specification:**
 ```yaml
 spec:
   task:
@@ -271,83 +271,84 @@ spec:
 
     failure_criteria:
       - condition: "output.jurisdiction == null"
-        action: compensate         # aciona SAGA-A upstream
+        action: compensate         # triggers upstream SAGA-A
       - condition: "output.confidence < 0.5"
-        action: escalate_human     # pausa, aguarda revisão humana
+        action: escalate_human     # pauses, awaits human review
       - condition: "elapsed > 30s"
-        action: circuit_breaker    # não transita, não propaga
+        action: circuit_breaker    # does not transition, does not propagate
 
     transition_to: legal-agent
     transition_guard: "output.jurisdiction != null AND output.confidence >= 0.85"
 ```
 
-**O que acontece quando o guard falha:**
+**What happens when the guard fails:**
 
 ```
-[Classifier Agent] → avalia transition_guard → FALHA
+[Classifier Agent] → evaluates transition_guard → FAIL
                               │
               ┌───────────────┼───────────────┐
               ▼               ▼               ▼
          compensate     escalate_human   circuit_breaker
-         (SAGA-A)       (pausa humana)   (aborta silencioso
-         reverte         aguarda input    com log de falha)
-         upstream        antes de seguir
+         (SAGA-A)       (human pause)    (silent abort
+         reverts         awaits input     with failure log)
+         upstream        before continuing
 ```
 
-**Relação com SAGA-A:**
-O Transition Guard é a **detecção de falha** — SAGA-A é a **resposta à falha**. Os dois padrões são complementares: sem Transition Guard, SAGA-A nunca é acionado porque a falha não é detectada antes da transição.
+**Relationship with SAGA-A:**
+The Transition Guard is **failure detection** — SAGA-A is the **failure response**. The two patterns are complementary: without Transition Guard, SAGA-A is never triggered because the failure is not detected before the transition.
 
-**Forças:**
-- Falhas são detectadas na fronteira do agente, não propagadas downstream
-- Contrato de interface explícito e auditável entre agentes
-- Base para H5: torna testável a hipótese de que tarefas incompletas corrompem redes
+**Forces:**
+- Failures are detected at the agent boundary, not propagated downstream
+- Explicit and auditable interface contract between agents
+- Foundation for H5: makes it testable that incomplete tasks corrupt networks
 
-**Consequências:**
-- Requer que o output do agente seja estruturado o suficiente para avaliação do guard
-- Agentes com output livre (texto puro) precisam de um parser de avaliação intermediário
-- Pode introduzir latência se o guard exigir chamada LLM adicional para avaliação
+**Consequences:**
+- Requires agent output to be structured enough for guard evaluation
+- Agents with free-form output (plain text) need an intermediate evaluation parser
+- May introduce latency if the guard requires an additional LLM call for evaluation
 
 ---
 
-## Mapa de Padrões
+## Pattern Map
 
 ```
-DESENVOLVIMENTO          RUNTIME               OPERAÇÃO
+DEVELOPMENT          RUNTIME               OPERATIONS
 ─────────────────────────────────────────────────────────
-Agent Manifest      →   Agent Registry    →   Blast Radius
-(contrato)              (descoberta)          (segurança)
-      │                      │
-      │               Connector Fabric      →   SAGA-A
-      │               (ferramentas)             (transações)
-      │                      │                     ▲
-      │               Knowledge Namespace          │
-      │               (dados)                      │
-      │                                            │
-      └──► Transition Guard ──────────────────────►┘
-           (critérios de sucesso,      aciona SAGA-A
-            falha e transição)         se guard falha
-                    │
-                    ▼
-              Choreography
-              (composição A2A)
+Agent Manifest  →   Agent Registry    →   Blast Radius
+(contract)          (discovery)           (security)
+      │                  │
+      │           Connector Fabric    →   SAGA-A
+      │           (tools)                 (transactions)
+      │                  │                    ▲
+      │           Knowledge Namespace         │
+      │           (data)                      │
+      │                                       │
+      └──► Transition Guard ────────────────►┘
+           (success criteria,     triggers SAGA-A
+            failure and           if guard fails
+            transition)
+                   │
+                   ▼
+             Choreography
+             (A2A composition)
 ```
 
 ---
 
-## Padrão 9: Emergent Routing
+## Pattern 9: Emergent Routing
 
-**Categoria:** Composição / Descoberta
+**Category:** Composition / Discovery
 
-**Problema:**
-Em redes com milhares de agentes, coreografia pré-definida é inviável — nenhum designer consegue mapear todas as rotas possíveis. Orquestração centralizada cria SPOF e não escala. É necessário um mecanismo pelo qual agentes descobrem autonomamente o próximo nó mais capaz, sem supervisão e sem DAG pré-definido.
+**Problem:**
+In networks with thousands of agents, pre-defined choreography is not feasible — no designer can map all possible routes. Centralized orchestration creates a SPOF and does not scale. A mechanism is needed by which agents autonomously discover the next most capable node, without supervision and without a pre-defined DAG.
 
-**Analogia neural:** Mecanismo de atenção nos Transformers — cada token calcula afinidade (Q·K) com todos os outros e roteia para os mais relevantes, sem regra pré-definida.
+**Neural analogue:** Attention mechanism in Transformers — each token calculates affinity (Q·K) with all others and routes to the most relevant ones, with no pre-defined rule.
 
-**Solução:**
-Após passar no Transition Guard, o agente consulta o Registry com seu output como query. O Registry retorna um ranking probabilístico de agentes com maior afinidade de capacidade. O agente roteia para o melhor candidato — ou para os K melhores em delegação 1:N.
+**Solution:**
+After passing the Transition Guard, the agent queries the Registry with its output as a query. The Registry returns a probabilistic ranking of agents with the highest capability affinity. The agent routes to the best candidate — or to the top K in 1:N delegation.
 
 ```
-Agente A conclui tarefa → output: {type: contract_classified, jurisdiction: BR}
+Agent A completes task → output: {type: contract_classified, jurisdiction: BR}
         │
         ▼
 Registry.route(output, context) → ranking:
@@ -356,15 +357,15 @@ Registry.route(output, context) → ranking:
   summarizer-agent    score: 0.67
         │
         ▼
-Agente A roteia para legal-agent-BR  ← sem DAG, sem supervisor
+Agent A routes to legal-agent-BR  ← no DAG, no supervisor
 ```
 
-**Como o Registry calcula afinidade:**
-- Cada agente publica no manifesto suas `capabilities` como vetor semântico
-- O output do agente emissor é embedado e comparado por similaridade
-- Score combina: similaridade semântica + taxa histórica de sucesso + latência média + carga atual
+**How the Registry calculates affinity:**
+- Each agent publishes its `capabilities` as a semantic vector in the manifest
+- The emitting agent's output is embedded and compared by similarity
+- Score combines: semantic similarity + historical success rate + average latency + current load
 
-**Manifesto do agente receptor:**
+**Receiving agent manifest:**
 ```yaml
 spec:
   capabilities:
@@ -376,88 +377,88 @@ spec:
     required_fields: [jurisdiction, document_text]
 ```
 
-**Três modos de roteamento:**
+**Three routing modes:**
 
-| Modo | Topologia | Descrição |
+| Mode | Topology | Description |
 |---|---|---|
-| `route_best` | 1:1 | Roteia para o agente com maior score |
-| `route_top_k` | 1:N | Delega para os K melhores em paralelo |
-| `route_quorum` | 1:N→N:1 | Delega para K, agrega quando quorum completa |
+| `route_best` | 1:1 | Routes to agent with highest score |
+| `route_top_k` | 1:N | Delegates to top K agents in parallel |
+| `route_quorum` | 1:N→N:1 | Delegates to K, aggregates when quorum completes |
 
-**Forças:**
-- Escala para milhares de agentes sem coreografia manual
-- Rotas se adaptam dinamicamente conforme agentes entram/saem do registry
-- Especialização emergente: agentes melhores em uma tarefa são naturalmente preferidos
+**Forces:**
+- Scales to thousands of agents without manual choreography
+- Routes adapt dynamically as agents enter/exit the registry
+- Emergent specialization: agents better at a task are naturally preferred
 
-**Consequências:**
-- Requer Registry com capacidade de busca vetorial (Qdrant/pgvector)
-- Rotas não-determinísticas dificultam reprodução exata de workflows
-- Auditoria precisa registrar qual rota foi escolhida e por quê (score log)
+**Consequences:**
+- Requires Registry with vector search capability (Redis Stack / pgvector)
+- Non-deterministic routes make exact workflow reproduction difficult
+- Audit must record which route was chosen and why (score log)
 
 ---
 
-## Padrão 10: Network Topologies (1:N e N:1)
+## Pattern 10: Network Topologies (1:N and N:1)
 
-**Categoria:** Composição / Agregação
+**Category:** Composition / Aggregation
 
-**Problema:**
-Workflows reais requerem delegação paralela (1:N) e agregação de resultados (N:1). Sem declaração explícita da topologia e da estratégia de agregação, o comportamento em caso de falha parcial é indefinido — especialmente em N:1, onde um agente aguarda múltiplos upstream.
+**Problem:**
+Real workflows require parallel delegation (1:N) and result aggregation (N:1). Without explicit declaration of the topology and aggregation strategy, behavior on partial failure is undefined — especially in N:1, where one agent awaits multiple upstreams.
 
-**Topologias válidas:**
+**Valid topologies:**
 
 ```
-1:1  Pipeline direto
+1:1  Direct pipeline
      A ──► B
 
-1:N  Fan-out (delegação paralela)
+1:N  Fan-out (parallel delegation)
      A ──► B
        ──► C
        ──► D
 
-N:1  Fan-in (agregação, join)
+N:1  Fan-in (aggregation, join)
      B ──►
      C ──► E
      D ──►
 
-N:N  EXCLUÍDO — sem semântica clara de agregação, produz caos
+N:N  EXCLUDED — no clear aggregation semantics, produces chaos
 ```
 
-**Analogia neural:**
+**Neural analogue:**
 ```
-1:N  →  divergência entre camadas (uma camada alimenta várias)
-N:1  →  pooling / agregação (várias camadas convergem em uma)
-N:N  →  full attention — não é o modelo desta arquitetura
-```
-
-**O problema central do N:1: falha parcial**
-
-```
-             ┌──► agente B (concluiu) ──┐
-agente A ────┤                          ├──► agente E (aguarda)
-             ├──► agente C (concluiu) ──┤
-             └──► agente D (FALHOU)  ───┘
+1:N  →  divergence between layers (one layer feeds many)
+N:1  →  pooling / aggregation (many layers converge into one)
+N:N  →  full attention — not the model of this architecture
 ```
 
-Três estratégias de agregação — devem ser declaradas no manifesto do agente E:
+**The core N:1 problem: partial failure**
 
-| Estratégia | Comportamento | Quando usar |
+```
+             ┌──► agent B (completed) ──┐
+agent A ─────┤                          ├──► agent E (waiting)
+             ├──► agent C (completed) ──┤
+             └──► agent D (FAILED)   ───┘
+```
+
+Three aggregation strategies — must be declared in agent E's manifest:
+
+| Strategy | Behavior | When to use |
 |---|---|---|
-| `wait_all` | Bloqueia até todos entregarem ou timeout | Output de E depende de todos os inputs |
-| `quorum` | Segue se K de N entregarem | Tolerância a falha parcial aceitável |
-| `best_effort` | Segue com o que chegou, marca os faltantes | Output de E é parcialmente válido |
+| `wait_all` | Blocks until all deliver or timeout | E's output depends on all inputs |
+| `quorum` | Proceeds if K of N deliver | Partial failure tolerance is acceptable |
+| `best_effort` | Proceeds with what arrived, marks missing | E's output is partially valid |
 
-**Manifesto do agente agregador (N:1):**
+**Aggregating agent manifest (N:1):**
 ```yaml
 spec:
   task:
     aggregation:
       mode: quorum            # wait_all | quorum | best_effort
-      quorum_size: 2          # mínimo de N para prosseguir
+      quorum_size: 2          # minimum N to proceed
       timeout: 60s
-      on_timeout: best_effort # degradação graciosa após timeout
+      on_timeout: best_effort # graceful degradation after timeout
       on_partial_failure:
-        action: compensate_completed  # SAGA-A nos agentes que já concluíram
-        mark_incomplete: true         # registra quais inputs faltaram
+        action: compensate_completed  # SAGA-A for agents that already completed
+        mark_incomplete: true         # records which inputs were missing
 
     success_criteria:
       - field: output.aggregated_results
@@ -465,14 +466,14 @@ spec:
         min_length: "{{ aggregation.quorum_size }}"
 ```
 
-**SAGA-A em topologias N:1:**
+**SAGA-A in N:1 topologies:**
 
-Quando agente D falha após B e C já terem concluído:
-- `wait_all` → compensa B e C, aciona SAGA-A completo
-- `quorum` → segue sem D, registra falha parcial, não compensa B e C
-- `best_effort` → segue sem D, output marcado como incompleto
+When agent D fails after B and C have already completed:
+- `wait_all` → compensates B and C, triggers full SAGA-A
+- `quorum` → proceeds without D, records partial failure, does not compensate B and C
+- `best_effort` → proceeds without D, output marked as incomplete
 
-**Manifesto do agente delegador (1:N):**
+**Delegating agent manifest (1:N):**
 ```yaml
 spec:
   task:
@@ -480,32 +481,32 @@ spec:
       mode: route_top_k
       k: 3
       strategy: parallel      # parallel | sequential_fallback
-      collect_via: fan_in     # referência ao agente agregador
+      collect_via: fan_in     # reference to aggregating agent
       on_all_failed: compensate_self
 ```
 
-**Forças:**
-- Comportamento de falha parcial explícito e auditável
-- Degradação graciosa configurável por workflow
-- SAGA-A sabe exatamente o que compensar em cada topologia
+**Forces:**
+- Explicit and auditable partial failure behavior
+- Configurable graceful degradation per workflow
+- SAGA-A knows exactly what to compensate in each topology
 
-**Consequências:**
-- Quorum e best_effort produzem outputs potencialmente incompletos — downstream precisa tratar
-- Timeout em wait_all pode se propagar como latência em cascata
+**Consequences:**
+- Quorum and best_effort produce potentially incomplete outputs — downstream must handle this
+- Timeout in wait_all can propagate as cascading latency
 
 ---
 
-## Mapa de Padrões (atualizado)
+## Pattern Map (updated)
 
 ```
-DESENVOLVIMENTO             RUNTIME                    OPERAÇÃO
+DEVELOPMENT                RUNTIME                    OPERATIONS
 ──────────────────────────────────────────────────────────────────
 Agent Manifest         →   Agent Registry         →   Blast Radius
-(contrato)                 (descoberta +               (segurança)
-      │                     embedding de caps)
+(contract)                 (discovery +               (security)
+      │                     capability embedding)
       │                          │
       │                    Emergent Routing  ←────────────────┐
-      │                    (1:1 probabilístico)               │
+      │                    (1:1 probabilistic)               │
       │                          │                            │
       │                    ┌─────┴──────┐                     │
       │                   1:N          N:1                    │
@@ -514,123 +515,121 @@ Agent Manifest         →   Agent Registry         →   Blast Radius
       │                    └─────┬──────┘                     │
       │                          │                            │
       │                  Connector Fabric    →   SAGA-A ──────┘
-      │                  (ferramentas)           (compensa por
-      │                          │                topologia)
+      │                  (tools)                 (compensates
+      │                          │                by topology)
       │                  Knowledge Namespace         ▲
-      │                  (dados)                     │
+      │                  (data)                      │
       │                                              │
       └──► Transition Guard ────────────────────────►┘
-           (success criteria +     aciona SAGA-A
-            self-healing loop)     se guard falha
+           (success criteria +     triggers SAGA-A
+            self-healing loop)     if guard fails
 ```
 
 ---
 
----
+## Pattern 11: Step-Coupled Memory
 
-## Padrão 11: Step-Coupled Memory
+**Category:** State / Memory
 
-**Categoria:** Estado / Memória
+**Problem:**
+In networks with emergent routing and dynamic topologies, agent-coupled memory creates two problems: dynamically discovered agents have no context, and in 1:N/N:1 topologies state fragments without a synchronization mechanism. Current frameworks conflate processing capability (agent) with state (memory), forcing stateful agents that cannot be freely substituted or routed.
 
-**Problema:**
-Em redes com roteamento emergente e topologias dinâmicas, a memória acoplada ao agente cria dois problemas: agentes descobertos dinamicamente não têm contexto, e em topologias 1:N/N:1 o estado se fragmenta sem mecanismo de sincronização. Frameworks atuais confundem capacidade de processamento (agente) com estado (memória), forçando agentes stateful que não podem ser substituídos ou roteados livremente.
+**Principle:**
+> **Agent = processing capability** (stateless, substitutable, routable)
+> **Step = unit of state and memory** (stateful, immutable after completion)
 
-**Princípio:**
-> **Agente = capacidade de processamento** (stateless, substituível, roteável)
-> **Step = unidade de estado e memória** (stateful, imutável após conclusão)
-
-**Solução:**
-A memória é acoplada ao step, não ao agente. O step é o objeto que viaja pela rede — carrega task, input, memória acumulada e output. O agente recebe o step, processa, devolve o step enriquecido. O agente é apenas o processador; o step é o portador de estado.
+**Solution:**
+Memory is coupled to the step, not the agent. The step is the object that travels through the network — it carries the task, input, accumulated memory, and output. The agent receives the step, processes it, and returns the enriched step. The agent is merely the processor; the step is the state carrier.
 
 ```
 Step = {
   id:        uuid
-  task:      descrição da tarefa
-  input:     dados de entrada
-  memory:    [ output do step anterior, step anterior ao anterior, ... ]
-  output:    resultado deste agente (preenchido após execução)
+  task:      task description
+  input:     input data
+  memory:    [ previous step output, step before that, ... ]
+  output:    result of this agent (filled after execution)
   metadata:  { agent, timestamp, score, branch_id }
 }
 ```
 
-**Comportamento por topologia:**
+**Behavior by topology:**
 
 ```
-1:1 — memória cresce linearmente
-  Step₀ → Agente A → Step₁{memory:[A]}
-         → Agente B → Step₂{memory:[A,B]}
+1:1 — memory grows linearly
+  Step₀ → Agent A → Step₁{memory:[A]}
+         → Agent B → Step₂{memory:[A,B]}
 
-1:N — step clonado no ponto de fork
+1:N — step cloned at fork point
   Step₂{memory:[A,B]}
-    → branch B: Step₂ᵦ{memory:[A,B], branch:B} → Agente C
-    → branch C: Step₂꜀{memory:[A,B], branch:C} → Agente D
-  Cada branch acumula independentemente a partir do mesmo snapshot
+    → branch B: Step₂ᵦ{memory:[A,B], branch:B} → Agent C
+    → branch C: Step₂꜀{memory:[A,B], branch:C} → Agent D
+  Each branch accumulates independently from the same snapshot
 
-N:1 — steps mergeados no agregador
+N:1 — steps merged at aggregator
   Step₃ᵦ{memory:[A,B,C]}  ┐
   Step₃꜀{memory:[A,B,D]}  ├─► merge ─► Step₄{memory:[A,B,C,D,E]}
   Step₃_d{memory:[A,B,E]} ┘
 ```
 
-**Manifesto:**
+**Manifest:**
 ```yaml
 spec:
   memory:
-    scope: step                      # acoplada ao step, não ao agente
-    append_output: true              # output é adicionado ao step.memory
-    visible_history: last_3          # agente vê N steps anteriores, não tudo
+    scope: step                      # coupled to step, not agent
+    append_output: true              # output is added to step.memory
+    visible_history: last_3          # agent sees N previous steps, not everything
 
     on_branch:
-      strategy: clone                # cada branch recebe snapshot do step atual
+      strategy: clone                # each branch receives snapshot of current step
 
     on_merge:
-      strategy: union                # une todos os outputs dos branches
+      strategy: union                # unions all branch outputs
       conflict_resolution: voting    # voting | last_write_wins | manual
 ```
 
-**O que isso resolve:**
+**What this solves:**
 
-| Problema | Solução |
+| Problem | Solution |
 |---|---|
-| Agente descoberto dinamicamente não tem contexto | Recebe o step completo |
-| 1:N: quanto de contexto cada branch recebe | Snapshot no ponto de fork |
-| N:1: como agregar contextos divergentes | Merge policy declarada no agregador |
-| SAGA-A: qual era o estado antes da ação | Step é imutável — snapshot nativo |
-| Replay de workflow | Sequência de steps é o log completo |
-| Context window do LLM | visible_history limita o que o agente recebe |
+| Dynamically discovered agent has no context | Receives the complete step |
+| 1:N: how much context each branch receives | Snapshot at the fork point |
+| N:1: how to aggregate divergent contexts | Merge policy declared in aggregator |
+| SAGA-A: what was the state before the action | Step is immutable — native snapshot |
+| Workflow replay | Step sequence is the complete log |
+| LLM context window | visible_history limits what the agent receives |
 
-**Relação com Emergent Routing:**
-Step-Coupled Memory é o que torna o Emergent Routing possível. Qualquer agente com a capacidade certa pode pegar qualquer step — porque o step carrega tudo que é necessário. O agente não precisa de contexto próprio.
+**Relationship with Emergent Routing:**
+Step-Coupled Memory is what makes Emergent Routing possible. Any agent with the right capability can pick up any step — because the step carries everything needed. The agent does not need its own context.
 
-**Analogia:**
-- **Programação funcional** — função pura recebe estado, retorna novo estado sem efeitos colaterais
-- **Event sourcing** — o log de steps é a fonte de verdade, o estado atual é derivado
-- **Git commits** — cada commit é um snapshot imutável; branches divergem e mergeiam
+**Analogues:**
+- **Functional programming** — pure function receives state, returns new state without side effects
+- **Event sourcing** — the step log is the source of truth, current state is derived
+- **Git commits** — each commit is an immutable snapshot; branches diverge and merge
 
-**Forças:**
-- Agentes são completamente stateless — substituíveis, escaláveis, roteáveis
-- Replay e debugging triviais — sequência de steps é o log completo
-- SAGA-A tem snapshot nativo para compensação — o step antes da ação é preservado
-- Context window gerenciável — visible_history evita crescimento ilimitado
+**Forces:**
+- Agents are completely stateless — substitutable, scalable, routable
+- Trivial replay and debugging — step sequence is the complete log
+- SAGA-A has a native snapshot for compensation — the step before the action is preserved
+- Manageable context window — visible_history prevents unbounded growth
 
-**Consequências:**
-- Steps crescem em tamanho ao longo de workflows longos — visible_history é essencial
-- Merge em N:1 com conflito real requer política explícita ou escalação humana
-- Imutabilidade do step requer armazenamento — não pode ser só in-memory em workflows longos
+**Consequences:**
+- Steps grow in size over long workflows — visible_history is essential
+- Merge in N:1 with real conflict requires an explicit policy or human escalation
+- Step immutability requires storage — cannot be in-memory only for long workflows
 
 ---
 
-## Mapa de Padrões (final)
+## Pattern Map (final)
 
 ```
-DESENVOLVIMENTO             RUNTIME                       OPERAÇÃO
+DEVELOPMENT                RUNTIME                       OPERATIONS
 ─────────────────────────────────────────────────────────────────────
 Agent Manifest         →   Agent Registry            →   Blast Radius
-(contrato)                 (descoberta +                  (segurança)
-      │                     embedding de caps)
+(contract)                 (discovery +                  (security)
+      │                     capability embedding)
       │                          │
       │                    Emergent Routing
-      │                    (roteamento probabilístico)
+      │                    (probabilistic routing)
       │                          │
       │                   ┌──────┴──────┐
       │                  1:N           N:1
@@ -638,27 +637,27 @@ Agent Manifest         →   Agent Registry            →   Blast Radius
       │                   └──────┬──────┘
       │                          │
       │              Step-Coupled Memory ──────────────────────┐
-      │              (estado viaja com o step)                 │
+      │              (state travels with the step)             │
       │                          │                             │
       │                  Connector Fabric    →   SAGA-A ───────┘
-      │                  (ferramentas MCP)       (compensa por
-      │                          │                topologia +
-      │                  Knowledge Namespace      snapshot do step)
-      │                  (RAG compartilhado)          ▲
+      │                  (MCP tools)             (compensates by
+      │                          │                topology +
+      │                  Knowledge Namespace      step snapshot)
+      │                  (shared RAG)                 ▲
       │                                               │
       └──► Transition Guard + Self-Healing ──────────►┘
-           (success criteria, iteração,    aciona SAGA-A
-            loop de correção)              se guard esgota
-                    │
-                    ▼
-              HITL (apenas ambiguidade genuína)
+           (success criteria, iteration,    triggers SAGA-A
+            correction loop)               if guard exhausted
+                   │
+                   ▼
+             HITL (genuine ambiguity only)
 ```
 
 ---
 
-## Próximos Padrões a Documentar
+## Patterns to Document Next
 
-- **Agent Versioning & Canary** — deploy gradual de nova versão de agente
-- **Cognitive Snapshot** — checkpoint de raciocínio para debugging (derivado de Step-Coupled Memory)
-- **Human-in-the-Loop Gate** — padrão para aprovação humana em ações críticas
-- **Agent Circuit Breaker** — para de rotear para agente com alta taxa de falha
+- **Agent Versioning & Canary** — gradual rollout of new agent version
+- **Cognitive Snapshot** — reasoning checkpoint for debugging (derived from Step-Coupled Memory)
+- **Human-in-the-Loop Gate** — pattern for human approval on critical actions
+- **Agent Circuit Breaker** — stops routing to agents with high failure rate
